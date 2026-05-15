@@ -28,13 +28,15 @@ release.
     parent / sibling navigation without leaving picker mode.
   - Bottom **Changes bar**: undo / redo + "Changes to execute" pill that
     expands into the per-change list; Copy Prompt lives in the pill.
-- **"Talk to Claude" chat workflow** — pick any element and reference
-  it in your next message as "the selected element" for single-node
-  asks, or pick a wrapper (a `div`, `section`, `.hero`, etc.) and say
-  "the selected area" for region-level refactors. Same picker,
-  parallel phrasing — no structured handoff, no new mode. The running
-  skill context resolves the reference. The element-tree popup
-  surfaces both phrases when you right-click a picked element.
+- **"Talk to Claude" chat workflow** — small **📋 copy icon** next to
+  the selector pill copies a tag-aware intro line to the clipboard.
+  Pick a leaf (h1, p, span, …) → `Let's talk about this element
+  \`.hero-title\` (h1):`. Pick a container (div, section, main, …) →
+  `Let's talk about this area \`.hero\` (section):`. Paste into Claude
+  in VS Code, then type the actual ask — Claude now has the selector
+  and the framing (element vs area) unambiguously. Pulses on first
+  pick of the session so the button is discoverable. The element-tree
+  popup surfaces the same tip when you right-click a picked element.
 - `bin/install` and `bin/uninstall` — symlink-based deploy so
   `~/.claude/skills/css-inspector` always points at the repo HEAD. Honors
   `CLAUDE_SKILLS_DIR` for non-standard layouts.

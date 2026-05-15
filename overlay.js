@@ -119,6 +119,24 @@
       font-size: 13px; line-height: 1; padding: 0 2px; flex-shrink: 0;
     }
     #__inspector-deselect:hover { color: #aaa; }
+    /* Copy-intro button — same visual weight as deselect, sits between pill and ✕ */
+    #__inspector-pill-copy {
+      background: none; border: none; color: #555; cursor: pointer;
+      padding: 0 2px; flex-shrink: 0; display: flex; align-items: center;
+      border-radius: 4px;
+    }
+    #__inspector-pill-copy svg { width: 12px; height: 12px; }
+    #__inspector-pill-copy:hover { color: #DA7756; }
+    #__inspector-pill-copy.just-copied { color: #3d9e6d; }
+    /* One-time pulse so first-time users notice the button after picking */
+    @keyframes __inspector-copy-pulse {
+      0%   { box-shadow: 0 0 0 0 rgba(218,119,86,0.55); color: #DA7756; }
+      70%  { box-shadow: 0 0 0 8px rgba(218,119,86,0);   color: #DA7756; }
+      100% { box-shadow: 0 0 0 0 rgba(218,119,86,0);     color: #555; }
+    }
+    #__inspector-pill-copy.first-hint {
+      animation: __inspector-copy-pulse 1.4s ease-out 2;
+    }
     #__inspector-header-controls { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
     #__inspector-close { background: none; border: none; color: #444; cursor: pointer; font-size: 14px; line-height: 1; padding: 0; }
     #__inspector-close:hover { color: #888; }
@@ -843,6 +861,12 @@
       </button>
       <div id="__inspector-pill-wrap">
         <span id="__inspector-selector-pill" contenteditable="true" spellcheck="false">—</span>
+        <button id="__inspector-pill-copy" data-tip='Copy a chat-ready intro &mdash; paste into Claude, then type your ask'>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="9" y="9" width="13" height="13" rx="2"/>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+        </button>
         <button id="__inspector-deselect" data-tip="Clear selection">✕</button>
       </div>
       <div id="__inspector-header-controls">
@@ -1141,9 +1165,10 @@
     }
 
     const sel = computeSelector(selectedElement);
+    const kind = elementKind(selectedElement);
     treePopup.innerHTML =
       html +
-      `<div class="tree-hint">Tip: tell Claude <span class="tree-hint-key">"the selected element"</span> for <span class="tree-hint-sel">${sel}</span>, or <span class="tree-hint-key">"the selected area"</span> for a region — pick a container first (div / section).</div>`;
+      `<div class="tree-hint">Tip: click the <span class="tree-hint-key">📋 copy icon</span> next to <span class="tree-hint-sel">${sel}</span> in the header to paste a chat-ready intro — Claude will then know the selected ${kind} is <span class="tree-hint-sel">${sel}</span>.</div>`;
 
     const allEls = [...ancestors, selectedElement, ...siblings];
     treePopup.querySelectorAll('.tree-row').forEach((row) => {
@@ -2914,11 +2939,52 @@
     tooltip.textContent = computeSelector(e.target);
   }
 
+  // Tags treated as a "region" / "area" when the user copies an intro.
+  // Everything else copies as "element". Heuristic, not exhaustive — fine
+  // because the user can edit the prefix word after pasting.
+  const AREA_TAGS = new Set([
+    'DIV','SECTION','MAIN','NAV','ARTICLE','ASIDE',
+    'HEADER','FOOTER','FORM','UL','OL','FIGURE','DETAILS'
+  ]);
+  function elementKind(el) {
+    return AREA_TAGS.has(el.tagName) ? 'area' : 'element';
+  }
+
+  function copySelectionIntro() {
+    if (!selectedElement) return;
+    const kind = elementKind(selectedElement);
+    const sel = computeSelector(selectedElement);
+    const tag = selectedElement.tagName.toLowerCase();
+    const intro = `Let's talk about this ${kind} \`${sel}\` (${tag}): `;
+    if (!navigator.clipboard || !navigator.clipboard.writeText) return;
+    navigator.clipboard.writeText(intro).then(() => {
+      const btn = root.querySelector('#__inspector-pill-copy');
+      if (!btn) return;
+      btn.classList.add('just-copied');
+      setTimeout(() => btn.classList.remove('just-copied'), 1500);
+    });
+  }
+  root.querySelector('#__inspector-pill-copy')
+      ?.addEventListener('click', copySelectionIntro);
+
+  // First selection of the session: pulse the Copy button so the user
+  // discovers the chat handoff. Pulses only once per page load.
+  let hasShownCopyHint = false;
+
   function setSelection(el) {
     selectedElement = el;
     root.querySelector('#__inspector-pick-btn').classList.add('has-selection');
     root.querySelector('#__inspector-header').classList.add('has-selection');
     root.querySelector('#__inspector-selector-pill').textContent = computeSelector(el);
+    if (!hasShownCopyHint) {
+      hasShownCopyHint = true;
+      const btn = root.querySelector('#__inspector-pill-copy');
+      if (btn) {
+        btn.classList.add('first-hint');
+        // Remove the class after the animation so re-adding it later works.
+        setTimeout(() => btn.classList.remove('first-hint'), 3200);
+      }
+    }
   }
 
   function clearSelection() {

@@ -31,19 +31,18 @@ A bottom Changes bar tracks every edit with undo / redo. Click **Copy Prompt** a
 
 ### Talk to Claude about what you're pointing at
 
-The inspector also doubles as a **visual selection layer for chat**. Pick any element on the page and the selector pill at the top shows what's currently selected (e.g. `.card`). Switch back to Claude in VS Code and reference it directly:
+The inspector doubles as a **visual selection layer for chat**. Pick anything on the page, then click the small **📋 copy icon** next to the selector pill in the header. A chat-ready intro line lands on your clipboard:
 
-> "rewrite the layout of the selected element to use grid"
-> "what's wrong with the spacing on the selected element?"
-> "the selected element + its siblings should be a flex row"
+- Pick a leaf (h1, p, span, a, …) → `Let's talk about this element \`.hero-title\` (h1):`
+- Pick a container (div, section, main, …) → `Let's talk about this area \`.hero\` (section):`
 
-**Region-level asks — "the selected area".** Want to discuss a whole strip of the page, not one node? Pick a wrapper element (a `div`, `section`, `main`, `.hero`, `.card` — whatever contains the region) and refer to it as the area:
+Paste into Claude in VS Code, then type the actual ask. Claude now has the selector unambiguously, with the right framing baked in:
 
-> "rewrite the selected area as a 3-column grid"
-> "what's the simplest refactor for the selected area?"
-> "the selected area should become a sticky header"
+> "Let's talk about this element `.hero-title` (h1): tighten the line-height and bump the weight to 800."
+> "Let's talk about this area `.hero` (section): rewrite it as a 3-column grid, stack on mobile."
+> "Let's talk about this area `.card` (div): add a sign-up CTA at the bottom."
 
-No new mode, no shift-click, no extra UI. Same picker, parallel phrasing — *"the selected element"* nudges a node, *"the selected area"* restructures a region. Claude infers from your framing which one you mean. It's the same point-and-discuss feel as Claude's design canvas, but for the code in front of you. Right-click a picked element to see this tip spelled out in the element-tree popup.
+Same picker, two parallel phrasings — *element* nudges a node, *area* restructures a region — and Claude infers which scope you mean from the prefix it just received. It's the same point-and-discuss feel as Claude's design canvas, with one extra step (paste once) to bridge the inspector and the chat. The Copy button pulses briefly on your first pick so you don't miss it; the element-tree popup also surfaces the tip when you right-click a picked element.
 
 ### Who it's for
 
