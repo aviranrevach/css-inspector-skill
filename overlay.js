@@ -91,20 +91,40 @@
     #__inspector-header button,
     #__inspector-header [contenteditable] { cursor: default; }
     #__inspector-header button { cursor: pointer; }
-    .inspector-select-btn {
-      flex: 1; display: flex; align-items: center; gap: 5px;
-      background: none; border: 1px solid #333; border-radius: 5px;
-      color: #999; font-size: 10px; font-weight: 500;
-      padding: 4px 10px; cursor: pointer; font-family: Inter, system-ui, sans-serif;
-      min-width: 0;
+    /* Select group — single blue-outlined container that holds the pick
+       button and, after selection, also the selector pill + copy icon.
+       Empty state: just the Select element CTA. Selected state: arrow icon +
+       pill text + copy icon, all inline in the same outlined pill. */
+    #__inspector-select-group {
+      flex: 1; min-width: 0;
+      display: flex; align-items: center; gap: 8px;
+      background: none; border: 1px solid #3B82F6; border-radius: 6px;
+      padding: 12px 16px;
+      color: #3B82F6; font-family: Inter, system-ui, sans-serif;
     }
-    .inspector-select-btn:hover { border-color: #555; color: #ccc; }
-    .inspector-select-btn.active { border-color: #3B82F6; color: #3B82F6; }
-    .inspector-select-btn svg { width: 11px; height: 11px; flex-shrink: 0; }
-    .inspector-select-btn.has-selection { flex: none; border-color: #3B82F6; color: #3B82F6; padding: 4px; width: 26px; height: 26px; justify-content: center; }
+    #__inspector-select-group:has(.inspector-select-btn:hover) { background: rgba(59,130,246,0.08); }
+    /* Selected-state padding is tighter so the bordered pill matches the
+       smaller header height after selection. */
+    #__inspector-header.has-selection #__inspector-select-group {
+      padding: 6px 10px;
+    }
+
+    .inspector-select-btn {
+      display: flex; align-items: center; gap: 10px;
+      background: none; border: none; padding: 0;
+      color: #3B82F6; font-size: 13px; font-weight: 600;
+      cursor: pointer; font-family: inherit; text-align: left;
+      flex: 1; min-width: 0;
+    }
+    .inspector-select-btn:hover { color: #3B82F6; }
+    .inspector-select-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+    /* Once an element is picked: button shrinks to icon-only at the start
+       of the group (flex: 0) so the pill can take the remaining space. */
+    .inspector-select-btn.has-selection { flex: 0; }
     .inspector-select-btn.has-selection .inspector-select-label { display: none; }
+
     #__inspector-pill-wrap {
-      display: none; flex: 1; align-items: center; gap: 4px; min-width: 0;
+      display: none; flex: 1; align-items: center; gap: 6px; min-width: 0;
     }
     #__inspector-header.has-selection #__inspector-pill-wrap { display: flex; }
     #__inspector-selector-pill {
@@ -114,15 +134,17 @@
       cursor: text; outline: none; min-width: 0;
     }
     #__inspector-selector-pill:focus { border-color: #888; box-shadow: none; }
-    /* Clear-selection button — shows when an element is picked. Same visual
-       weight as the minimize / close icon-buttons on the right of the header. */
+    /* Clear-selection button — back-arrow icon styled like minimize / close.
+       Hidden by default, revealed by #__inspector-header.has-selection. */
     #__inspector-deselect {
+      display: none;
       background: none; border: none; color: #555; cursor: pointer;
-      padding: 0 2px; flex-shrink: 0; display: flex; align-items: center;
+      padding: 0 2px; flex-shrink: 0; align-items: center;
       border-radius: 4px;
     }
-    #__inspector-deselect svg { width: 13px; height: 13px; }
-    #__inspector-deselect:hover { color: #DA7756; }
+    #__inspector-header.has-selection #__inspector-deselect { display: flex; }
+    #__inspector-deselect svg { width: 14px; height: 14px; }
+    #__inspector-deselect:hover { color: #aaa; }
     /* Copy-intro button — same visual weight as deselect, sits between pill and ✕ */
     #__inspector-pill-copy {
       background: none; border: none; color: #555; cursor: pointer;
@@ -863,25 +885,27 @@
   root.id = '__inspector-root';
   root.innerHTML = `
     <div id="__inspector-header">
-      <button class="inspector-select-btn" id="__inspector-pick-btn" data-tip="Select — click any element on the page to inspect it">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4l7 18 3-7 7-3z"/></svg>
-        <span class="inspector-select-label">Select element</span>
-      </button>
-      <div id="__inspector-pill-wrap">
-        <span id="__inspector-selector-pill" contenteditable="true" spellcheck="false">—</span>
-        <button id="__inspector-pill-copy" data-tip='Copy a chat-ready intro &mdash; paste into Claude, then type your ask'>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <rect x="9" y="9" width="13" height="13" rx="2"/>
-            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-          </svg>
+      <div id="__inspector-select-group">
+        <button class="inspector-select-btn" id="__inspector-pick-btn" data-tip="Select — click any element on the page to inspect it">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4l7 18 3-7 7-3z"/></svg>
+          <span class="inspector-select-label">Select element</span>
         </button>
-        <button id="__inspector-deselect" data-tip="Clear selection">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
-          </svg>
-        </button>
+        <div id="__inspector-pill-wrap">
+          <span id="__inspector-selector-pill" contenteditable="true" spellcheck="false">—</span>
+          <button id="__inspector-pill-copy" data-tip='Copy a chat-ready intro &mdash; paste into Claude, then type your ask'>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="9" y="9" width="13" height="13" rx="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+          </button>
+        </div>
       </div>
       <div id="__inspector-header-controls">
+        <button id="__inspector-deselect" data-tip="Clear selection">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>
+          </svg>
+        </button>
         <button id="__inspector-minimize" data-tip="Minimize — collapse panel to header bar">—</button>
         <button id="__inspector-close" data-tip="Close inspector">✕</button>
       </div>
