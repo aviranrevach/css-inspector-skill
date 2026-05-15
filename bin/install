@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Symlink this repository into ~/.claude/skills/css-inspector so the skill
+# loaded by Claude Code is always the repo's current HEAD. Idempotent.
+set -euo pipefail
+
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+TARGET="${CLAUDE_SKILLS_DIR:-$HOME/.claude/skills}/css-inspector"
+
+mkdir -p "$(dirname "$TARGET")"
+
+if [ -L "$TARGET" ]; then
+  current="$(readlink "$TARGET")"
+  if [ "$current" = "$REPO_DIR" ]; then
+    echo "Already linked: $TARGET -> $REPO_DIR"
+    exit 0
+  fi
+  echo "Replacing existing symlink: $TARGET (was -> $current)"
+  rm "$TARGET"
+elif [ -e "$TARGET" ]; then
+  backup="$TARGET.bak.$(date +%Y%m%d-%H%M%S)"
+  echo "Backing up existing directory: $TARGET -> $backup"
+  mv "$TARGET" "$backup"
+fi
+
+ln -s "$REPO_DIR" "$TARGET"
+echo "Linked: $TARGET -> $REPO_DIR"
+echo
+echo "Claude Code will now load the skill directly from this repo."
+echo "Edit overlay.js / SKILL.md here and changes apply on the next skill run."

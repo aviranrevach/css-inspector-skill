@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Remove the symlink at ~/.claude/skills/css-inspector. Only touches symlinks
+# we created; refuses to delete a regular directory.
+set -euo pipefail
+
+TARGET="${CLAUDE_SKILLS_DIR:-$HOME/.claude/skills}/css-inspector"
+
+if [ ! -e "$TARGET" ] && [ ! -L "$TARGET" ]; then
+  echo "Nothing to remove: $TARGET does not exist"
+  exit 0
+fi
+
+if [ ! -L "$TARGET" ]; then
+  echo "Refusing to remove: $TARGET is a regular directory, not a symlink."
+  echo "If you want to remove it, do so manually."
+  exit 1
+fi
+
+rm "$TARGET"
+echo "Removed symlink: $TARGET"
