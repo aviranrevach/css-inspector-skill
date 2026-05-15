@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CSS Inspector Test Fixture</title>
+  <style>
+    body { font-family: Inter, sans-serif; margin: 0; background: #f5f5f5; }
+    .hero { background: #1a1a2e; color: white; padding: 80px 40px; text-align: center; }
+    .hero-title { font-size: 48px; font-weight: 700; margin: 0 0 16px; }
+    .hero-subtitle { font-size: 20px; color: #aaa; }
+    .nav { display: flex; gap: 24px; padding: 16px 40px; background: white; border-bottom: 1px solid #eee; }
+    .nav a { color: #333; text-decoration: none; font-size: 14px; font-weight: 500; }
+    .card { background: white; border-radius: 8px; padding: 24px; margin: 24px 40px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .card-title { font-size: 18px; font-weight: 600; margin: 0 0 8px; }
+    .card-body { font-size: 14px; color: #666; line-height: 1.6; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; background: #eee; color: #333; }
+    .tag-featured { background: #dbeafe; color: #1d4ed8; }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <a href="#">Home</a>
+    <a href="#">About</a>
+    <a href="#">Contact</a>
+  </nav>
+  <section class="hero">
+    <h1 class="hero-title" id="main-heading">Welcome to the Inspector</h1>
+    <p class="hero-subtitle">Click any element to inspect and edit its styles</p>
+  </section>
+  <div class="card">
+    <h2 class="card-title">Sample Card</h2>
+    <p class="card-body">This is a sample card for testing the CSS inspector panel. Try selecting this element and changing its padding, font size, or background color. Try <span>selecting this span</span> — it has no class or id.</p>
+    <div class="tag tag-featured">Featured</div>
+  </div>
+</body>
+</html>

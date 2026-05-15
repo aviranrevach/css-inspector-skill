@@ -1,0 +1,28 @@
+# Deployment artifacts injected into downstream projects
+.inspector/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Test artifacts
+/test-results/
+/playwright-report/
+/playwright/.cache/
+
+# Local dev / scratch
+.playwright-mcp/
+.superpowers/
+docs/superpowers/
+.scratch/
+*.log
+
+# OS
+Thumbs.db
