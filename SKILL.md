@@ -84,6 +84,7 @@ Tell the user:
 
 - The panel docks to the top-right. Drag the header to move it; the bottom-left handle resizes it; the `—` button minimizes it to the header bar.
 - Click the **Select** button (top-left of the header), then click any element on the page. The selector pill at the top shows what's currently selected. Right-click a picked element to open the element-tree popup for navigating parents and siblings.
+- **Talk to Claude about the selection.** With an element picked, switch back to chat and say "the selected element should ..." for a single-node ask, or pick a wrapper element (a `div` / `section` / container) and say "treat the selected element as an area, ..." for region-level refactors. No new mode — same picker, different framing.
 - Edit in the **Design** tab — collapsible sections for **Position** (X/Y/Z, rotation, flip), **Layout** (flow, dimensions, padding/margin diagram, clip/border-box), **Appearance** (opacity, radius, fill, stroke, shadow), and **Typography** (font family, size, weight, line height, color). All edits preview live. The color picker supports solid and linear-gradient with eyedropper.
 - Use the **CSS Raw** tab to edit matched stylesheet rules as plain text and click **Apply to tracker**.
 - The bottom **Changes bar** shows undo/redo and a "Changes to execute" pill. Click the pill to expand the list of tracked edits, then click **Copy Prompt**.
