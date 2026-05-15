@@ -36,7 +36,7 @@ If found → **live mode** with that port.
 ## Step 4a — Static mode setup
 
 1. Read `index.html` and all linked CSS/SCSS files.
-2. Build a `cssMap` object mapping each selector+property to its source file and line number. Example:
+2. Build a `cssMap` object mapping each `selector → property → { file, line }`. Example:
    ```json
    { ".hero-title": { "font-size": { "file": "styles.css", "line": 24 } } }
    ```
@@ -56,7 +56,7 @@ If found → **live mode** with that port.
    ```
    Replace `CSS_MAP_JSON_HERE` with the JSON-stringified cssMap.
 
-   **Important:** The overlay.js script tag must come BEFORE the iframe so the inspector panel loads on top of the page.
+   The overlay is iframe-aware: it detects the iframe, waits for it to finish loading, and binds picker listeners to the iframe's `contentDocument`. The script tag and iframe can appear in either order.
 
 6. Kill any process on port 8787: `lsof -ti:8787 | xargs kill -9 2>/dev/null || true`
 7. Start server: `python3 .inspector/server.py 8787 . &`
@@ -81,18 +81,19 @@ If found → **live mode** with that port.
 ## Step 5 — Wait for user to finish
 
 Tell the user:
-- Use the **Picker** tab to select an element
-- Edit in **Design** tab (live preview) or **CSS Raw** tab
-- Open **Changes** tab and click **Copy Prompt** when done
-- Paste the copied prompt back into this chat
+
+- The panel docks to the top-right. Drag the header to move it; the bottom-left handle resizes it; the `—` button minimizes it to the header bar.
+- Click the **Select** button (top-left of the header), then click any element on the page. The selector pill at the top shows what's currently selected. Right-click a picked element to open the element-tree popup for navigating parents and siblings.
+- Edit in the **Design** tab — collapsible sections for **Position** (X/Y/Z, rotation, flip), **Layout** (flow, dimensions, padding/margin diagram, clip/border-box), **Appearance** (opacity, radius, fill, stroke, shadow), and **Typography** (font family, size, weight, line height, color). All edits preview live. The color picker supports solid and linear-gradient with eyedropper.
+- Use the **CSS Raw** tab to edit matched stylesheet rules as plain text and click **Apply to tracker**.
+- The bottom **Changes bar** shows undo/redo and a "Changes to execute" pill. Click the pill to expand the list of tracked edits, then click **Copy Prompt**.
+- Paste the copied prompt back into this chat.
 
 When the user pastes a prompt containing `<changes>`, proceed to Step 6.
 
 ## Step 6 — Apply changes to source
 
-Parse the `<changes>` JSON block from the user's message.
-
-For each change object `{ selector, property, from, to, file, line }`:
+Parse the `<changes>` JSON block from the user's message. Each entry is `{ selector, property, from, to, file, line }`.
 
 - **If `file` is set:** Open that file. Find the CSS rule for `selector`. Update the `property` value to `to`. If `line` is provided, start searching near that line.
 - **If `file` is null:** Search the codebase for where `selector` is defined. Check CSS/SCSS files first. If found in a component file (CSS-in-JS, CSS Module, Vue/Svelte scoped styles), find the declaration and update it. If the style comes from an external/CDN stylesheet, add an override rule to the project's main CSS file.

@@ -4,87 +4,77 @@ A visual CSS inspector that lives inside your browser, built for Claude Code. Pi
 
 ---
 
-## What it looks like
+## What it does
 
-```
-┌─────────────────────────────────┐
-│ CSS Inspector        .hero-title│  ← selector pill (coral)
-├──────────────────────────────────┤
-│ Picker  Design  CSS Raw  Changes │  ← active tab has coral underline
-├──────────────────────────────────┤
-│ POSITION & LAYOUT                │
-│  Display       block             │
-│  Width         1200px            │
-│  Height        auto              │
-│ SPACING                          │
-│  Padding       80px 40px         │
-│  Margin        0                 │
-│ TYPOGRAPHY                       │
-│  Font Family   Inter             │
-│  Font Size     48px      ← edit  │
-│  Font Weight   700               │
-│  Color         ■ #ffffff         │
-│ BACKGROUND                       │
-│  Background    ■ #1a1a2e         │
-│ BORDER                           │
-│  Border Radius 0px               │
-│ SHADOW & BLUR                    │
-│  Box Shadow    none              │
-├──────────────────────────────────┤
-│        [ Copy Prompt ]           │  ← coral button
-└──────────────────────────────────┘
-```
+The inspector docks to the top-right of your page (draggable, resizable, minimizable). Click **Select**, pick any element, and edit its styles in four collapsible sections:
 
-The panel appears fixed in the top-right corner of your page. It never breaks your layout.
+| Section | Properties |
+|---|---|
+| Position | X / Y / Z, rotation, flip |
+| Layout | flow (block/flex/grid/inline), width × height, padding & margin diagram, clip-content, border-box |
+| Appearance | opacity, border-radius, fill, stroke, shadow |
+| Typography | font family, size, weight, line height, color |
+
+Every change previews live on the page. Prefer raw CSS? The **CSS Raw** tab shows the matched stylesheet rules as editable text and can apply them back to the change tracker.
+
+When you're done, the bottom **Changes** bar shows undo / redo and a count of tracked edits. Click the pill to expand the list, then **Copy Prompt** — and paste back into Claude. Claude reads the structured `<changes>` block, updates the source files precisely, shows you a diff, and asks for confirmation before saving.
 
 ---
 
-## How to use it
+## How it attaches
 
-### 1. Trigger the skill
+| Project type | How it attaches |
+|---|---|
+| Static HTML + CSS | Serves your files locally on port 8787, wraps `index.html` in an iframe inside `inspector.html` |
+| Vite / React / Vue / Next.js | Temporarily injects a `<script>` tag into your `index.html` (or `public/index.html`) — removed automatically when done |
+
+Claude detects which mode to use. If it's ambiguous, it asks.
+
+---
+
+## How to trigger
 
 Say any of these in Claude Code:
 
-> "inspect my page"  
-> "let me tweak the styles"  
-> "visual CSS editor"  
-> "open the CSS inspector"  
+> "inspect my page"
+> "let me tweak the styles"
+> "visual CSS editor"
+> "open the CSS inspector"
 > "I want to edit styles visually"
 
-Claude detects whether you have a dev server running or plain HTML files, and launches the inspector accordingly.
+---
+
+## Picking elements
+
+Click the **Select** button in the header → click any element on the page. The blue outline shows what you're about to select. The selector pill at the top shows what's currently selected (e.g. `.hero-title`, `#main-heading`).
+
+**Right-click** a picked element to open the **element-tree popup** — a small overlay showing the parent chain and siblings. Click any entry to jump the selection up or sideways through the DOM without leaving picker mode.
 
 ---
 
-### 2. Pick an element
+## Editing styles
 
-Click the **Picker** tab → hit **Pick element** → hover over anything on your page. A blue outline shows what you're about to select. Click to lock it in.
+Open the **Design** tab. Sections collapse with a chevron; they remember their state between sessions. Every edit previews live — no reload needed.
 
-The selector pill at the top updates to show exactly which element is selected (e.g. `.hero-title`, `#main-heading`).
+Highlights:
 
----
-
-### 3. Edit in the Design panel
-
-Switch to the **Design** tab. You'll see all computed styles grouped by category:
-
-| Group | Properties |
-|---|---|
-| Position & Layout | display, position, width, height |
-| Spacing | padding, margin |
-| Typography | font-family, font-size, font-weight, line-height, letter-spacing, color |
-| Background | background-color |
-| Border | border-width, border-style, border-color, border-radius |
-| Shadow & Blur | box-shadow, filter |
-
-Every change previews **live on the page** — no reload needed.
-
-Prefer working in raw CSS? The **CSS Raw** tab shows the matched stylesheet rules as editable text.
+- **Padding / margin diagram** — a visual box-model diagram with separate input fields for each of the eight edges; lock-toggle for symmetric values.
+- **Color picker** — solid + linear-gradient with stops, an eyedropper, hex / HSL inputs, and an opacity slider. Click any swatch to open it inline.
+- **Scrub-spacing** — drag horizontally on any numeric input (padding, margin, font-size, etc.) to nudge the value live.
+- **Layers** — for shadows and gradients, layer rows with eye / remove / reorder controls.
 
 ---
 
-### 4. Review your changes
+## Reviewing your changes
 
-Open the **Changes** tab to see everything you've edited:
+The bottom **Changes** bar is always visible:
+
+```
+[ ↶ ] [ ↷ ]   (5) Changes to execute ▾                [Copy Prompt]
+```
+
+- Undo / Redo step backwards and forwards through every edit you've made.
+- Click the pill to expand the drawer:
 
 ```
 .hero-title · font-size    →  64px   ↩
@@ -92,13 +82,11 @@ Open the **Changes** tab to see everything you've edited:
 .nav        · padding      →  16px    ↩
 ```
 
-Each change has an undo button. When you're happy, click **Copy Prompt**.
+- Each row has an individual undo. **Copy Prompt** copies the whole batch to your clipboard.
 
 ---
 
-### 5. Paste into Claude
-
-The copied prompt looks like this:
+## What gets copied
 
 ```
 Apply these CSS changes:
@@ -111,36 +99,35 @@ Apply these CSS changes:
 </changes>
 ```
 
-Paste it back into Claude Code. Claude reads the structured `<changes>` block, updates the source files precisely, shows you a diff, and asks for confirmation before saving.
+Claude parses the `<changes>` JSON block and updates the source files precisely (surgical in-place edit by selector + line number).
 
 ---
 
-## Works with any project
+## How changes get applied
 
-| Project type | How it attaches |
-|---|---|
-| Static HTML + CSS | Serves your files locally on port 8787, wraps in inspector |
-| Vite, React, Vue, Next.js | Temporarily injects a `<script>` tag into your `index.html` — removed automatically when done |
+- **CSS / SCSS files** — in-place edit using selector + line from the changes block.
+- **Component files** (CSS-in-JS, CSS Modules, Vue scoped, Svelte) — Claude locates the style declaration and updates it.
+- **External stylesheets** (Tailwind CDN, etc.) — Claude adds an override rule to your project's own CSS.
 
-Claude detects which mode to use. If it's ambiguous, it asks.
+A unified diff is shown before any file is written.
 
 ---
 
 ## Install
 
-Copy the skill folder into your Claude skills directory:
+Clone the repo and run the install script:
 
 ```bash
-cp -r css-inspector ~/.claude/skills/
+git clone https://github.com/aviranrevach/css-inspector-skill ~/code/css-inspector
+cd ~/code/css-inspector
+./bin/install
 ```
 
-Or clone directly:
+`bin/install` creates a symlink at `~/.claude/skills/css-inspector` pointing at the cloned repo, so the skill loaded by Claude Code is always the repo's current HEAD. To remove: `./bin/uninstall`.
 
-```bash
-git clone https://github.com/aviranrevach/css-inspector-skill ~/.claude/skills/css-inspector
-```
+If you keep skills somewhere other than `~/.claude/skills`, set `CLAUDE_SKILLS_DIR` before running install.
 
-**Requirements:** Python 3 (for static mode server) · Node.js 18+ · Claude Code
+**Requirements:** Python 3 (for the static-mode server) · Node.js 18+ (for tests) · Claude Code.
 
 ---
 
@@ -151,27 +138,25 @@ css-inspector/
 ├── SKILL.md          # Claude workflow instructions (the brain)
 ├── overlay.js        # Inspector panel UI — injected into your page
 ├── server.py         # Local file server for static HTML projects
+├── bin/
+│   ├── install       # Symlink into ~/.claude/skills/css-inspector
+│   └── uninstall     # Remove that symlink
 └── tests/
-    ├── test-selector.js   # Unit tests — selector computation
-    ├── test-tracker.js    # Unit tests — change tracking
-    ├── test-prompt.js     # Unit tests — copy prompt format
-    └── fixture.html       # Sample page for manual testing
+    ├── fixture.html         # Sample page for manual + E2E tests
+    ├── test-selector.js     # Unit tests — selector computation
+    ├── test-tracker.js      # Unit tests — change tracking
+    ├── test-prompt.js       # Unit tests — copy prompt format
+    └── test-overlay-load.html  # Smoke test for overlay boot
 ```
 
 ---
 
 ## Design
 
-The inspector uses a **Vercel-structure + Claude accent** theme — cold dark neutrals with Claude coral (`#DA7756`) on the selector pill, active tab underline, input focus rings, change arrows, and the Copy Prompt button.
+Cold dark neutrals (`#1c1c1c` panel, `#d4d4d4` text) with Claude coral (`#DA7756`) on the selector pill, active accents, and the Copy Prompt button. Blue (`#3B82F6`) for the picker outline and Select button accent.
 
 ---
 
-## How changes get applied
+## Architecture notes
 
-When Claude receives your Copy Prompt:
-
-- **CSS/SCSS files** — surgical in-place edit using the selector and line number from the changes block
-- **Component files** (CSS-in-JS, CSS Modules, Vue scoped, Svelte) — Claude finds the style declaration and updates it
-- **External stylesheets** (Tailwind CDN, etc.) — Claude adds an override rule to your project's own CSS
-
-Always shows a diff before writing anything.
+`overlay.js` is iframe-aware. In static mode the inspector page wraps the user's `index.html` in an `<iframe>`, and the overlay panel lives in the parent document. The overlay resolves `targetDoc` / `targetWin` from `iframe.contentDocument` after the frame's `load` event, then binds the picker listeners, `getComputedStyle` reads, and `document.styleSheets` iteration against the iframe's document — so a click inside the iframe is observed correctly by a panel that lives outside it.
