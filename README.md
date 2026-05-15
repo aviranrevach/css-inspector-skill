@@ -131,6 +131,19 @@ If you keep skills somewhere other than `~/.claude/skills`, set `CLAUDE_SKILLS_D
 
 ---
 
+## Tests
+
+```bash
+npm test          # unit tests (selector, change tracker, copy prompt) — no install needed
+npm install       # one-time, for the e2e suite
+npm run test:e2e  # Playwright integration test for the iframe-aware picker
+npm run test:all  # both
+```
+
+The e2e test (`tests/e2e/picker.spec.mjs`) is a regression guard for the iframe-picker bug: it spawns the static-mode server, loads `inspector.html` headlessly, clicks **Select**, picks `.hero-title` inside the iframe, and asserts the selector pill updates to `#main-heading` and that the Design panel reads a real `font-size` value through `targetWin.getComputedStyle`.
+
+---
+
 ## File structure
 
 ```
@@ -141,12 +154,16 @@ css-inspector/
 ├── bin/
 │   ├── install       # Symlink into ~/.claude/skills/css-inspector
 │   └── uninstall     # Remove that symlink
-└── tests/
-    ├── fixture.html         # Sample page for manual + E2E tests
-    ├── test-selector.js     # Unit tests — selector computation
-    ├── test-tracker.js      # Unit tests — change tracking
-    ├── test-prompt.js       # Unit tests — copy prompt format
-    └── test-overlay-load.html  # Smoke test for overlay boot
+├── tests/
+│   ├── fixture.html              # Sample page for manual + E2E tests
+│   ├── test-selector.js          # Unit tests — selector computation
+│   ├── test-tracker.js           # Unit tests — change tracking
+│   ├── test-prompt.js            # Unit tests — copy prompt format
+│   ├── test-overlay-load.html    # Smoke test for overlay boot
+│   └── e2e/
+│       └── picker.spec.mjs       # Playwright: iframe-aware picker regression guard
+├── playwright.config.mjs
+└── package.json
 ```
 
 ---
