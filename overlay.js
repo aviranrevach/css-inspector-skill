@@ -2615,16 +2615,62 @@
   }
 
   function wireUpInputs(panel, sel) {
-    panel.querySelectorAll('.inspector-field input, .inspector-field select, .inspector-field-sm input').forEach(input => {
+    // Resolve the CSS value to apply, given the input's raw text + displayed unit.
+    // Special cases:
+    //   - opacity with % unit: 50 → "0.5" (CSS opacity is 0-1, not 0-100)
+    //   - ° unit (rotate): 45 → "45deg"
+    //   - numeric value + numeric unit: "32" + "px" → "32px"
+    //   - non-numeric ("auto", "normal"): pass through as-is
+    function cssValueFor(prop, raw, unit) {
+      if (raw === '' || raw === '-' || raw == null) return null; // mid-typing
+      const trimmed = String(raw).trim();
+      const num = parseFloat(trimmed);
+      if (isNaN(num)) return trimmed; // 'auto', 'normal', etc.
+      if (prop === 'opacity' && unit === '%') return String(num / 100);
+      if (unit === '°') return num + 'deg';
+      if (unit) return num + unit;
+      return String(num);
+    }
+    function unitFor(el) {
+      return (
+        el.closest('.inspector-field')?.querySelector('.inspector-fu')?.textContent ||
+        el.closest('.inspector-field-sm')?.querySelector('.inspector-fu')?.textContent ||
+        ''
+      );
+    }
+
+    panel.querySelectorAll('.inspector-field input, .inspector-field-sm input').forEach(input => {
       if (input.dataset._wired) return;
       input.dataset._wired = '1';
+      const prop = input.dataset.prop;
+
+      // `input` event = live preview while typing (no trackChange churn).
+      input.addEventListener('input', (e) => {
+        const value = cssValueFor(prop, e.target.value, unitFor(e.target));
+        if (value == null) return;
+        if (selectedElement) selectedElement.style.setProperty(prop, value);
+      });
+
+      // `change` (blur/Enter) commits and records in trackChange.
       input.addEventListener('change', (e) => {
+        const from = e.target.dataset.from;
+        const value = cssValueFor(prop, e.target.value, unitFor(e.target));
+        if (value == null) return;
+        if (selectedElement) selectedElement.style.setProperty(prop, value);
+        trackChange(sel, prop, from, value);
+      });
+    });
+
+    // <select> elements (display, position, etc.) — values are CSS keywords,
+    // no unit handling needed. `change` is the only event selects fire.
+    panel.querySelectorAll('.inspector-field select').forEach(select => {
+      if (select.dataset._wired) return;
+      select.dataset._wired = '1';
+      select.addEventListener('change', (e) => {
         const prop = e.target.dataset.prop;
         const from = e.target.dataset.from;
         const to = e.target.value;
-        if (selectedElement) {
-          selectedElement.style.setProperty(prop, to);
-        }
+        if (selectedElement) selectedElement.style.setProperty(prop, to);
         trackChange(sel, prop, from, to);
       });
     });
