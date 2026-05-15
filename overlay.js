@@ -114,11 +114,15 @@
       cursor: text; outline: none; min-width: 0;
     }
     #__inspector-selector-pill:focus { border-color: #888; box-shadow: none; }
+    /* Clear-selection button — shows when an element is picked. Same visual
+       weight as the minimize / close icon-buttons on the right of the header. */
     #__inspector-deselect {
       background: none; border: none; color: #555; cursor: pointer;
-      font-size: 13px; line-height: 1; padding: 0 2px; flex-shrink: 0;
+      padding: 0 2px; flex-shrink: 0; display: flex; align-items: center;
+      border-radius: 4px;
     }
-    #__inspector-deselect:hover { color: #aaa; }
+    #__inspector-deselect svg { width: 13px; height: 13px; }
+    #__inspector-deselect:hover { color: #DA7756; }
     /* Copy-intro button — same visual weight as deselect, sits between pill and ✕ */
     #__inspector-pill-copy {
       background: none; border: none; color: #555; cursor: pointer;
@@ -871,7 +875,11 @@
             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
           </svg>
         </button>
-        <button id="__inspector-deselect" data-tip="Clear selection">✕</button>
+        <button id="__inspector-deselect" data-tip="Clear selection">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+          </svg>
+        </button>
       </div>
       <div id="__inspector-header-controls">
         <button id="__inspector-minimize" data-tip="Minimize — collapse panel to header bar">—</button>
@@ -1207,10 +1215,11 @@
       left = rect.left;
       const spaceBelow = window.innerHeight - rect.bottom - 8;
       const spaceAbove = rect.top - 8;
-      if (spaceBelow >= actualH || spaceBelow >= spaceAbove) {
+      // Open in whichever direction has more room, not just "below if it fits".
+      if (spaceBelow >= spaceAbove) {
         top = rect.bottom + 4;
       } else {
-        top = rect.top - actualH - 4;
+        top = rect.top - Math.min(actualH, spaceAbove) - 4;
       }
     } else {
       left = treePopup._posX || 100;
@@ -1221,7 +1230,11 @@
       }
     }
     left = Math.max(4, Math.min(window.innerWidth - 276, left));
-    top = Math.max(4, Math.min(window.innerHeight - actualH - 4, top));
+    top = Math.max(4, Math.min(window.innerHeight - 12, top));
+    // Inline max-height that respects the actual position — so the popup
+    // self-scrolls instead of overflowing past the viewport bottom.
+    const availableBelow = window.innerHeight - top - 4;
+    treePopup.style.maxHeight = availableBelow + 'px';
     treePopup.style.left = left + 'px';
     treePopup.style.top = top + 'px';
     treePopup.classList.add('visible');
@@ -1444,6 +1457,31 @@
     const iframe = document.querySelector('iframe');
     if (!iframe) return;
     iframe.style.pointerEvents = suppress ? 'none' : '';
+  }
+
+  // ── Value/unit helpers shared between wireUpInputs and initScrub ─────────
+  // Resolve the CSS value to apply, given an input's raw text + displayed unit.
+  // Special cases:
+  //   opacity with % unit: 50 → "0.5" (CSS opacity is 0-1, not 0-100)
+  //   ° unit (rotate):     45 → "45deg" (° is not a real CSS unit)
+  //   numeric + unit:      "32" + "px" → "32px"
+  //   non-numeric:         "auto", "normal" — pass through unchanged
+  function cssValueFor(prop, raw, unit) {
+    if (raw === '' || raw === '-' || raw == null) return null;
+    const trimmed = String(raw).trim();
+    const num = parseFloat(trimmed);
+    if (isNaN(num)) return trimmed;
+    if (prop === 'opacity' && unit === '%') return String(num / 100);
+    if (unit === '°') return num + 'deg';
+    if (unit) return num + unit;
+    return String(num);
+  }
+  function unitFor(el) {
+    return (
+      el.closest('.inspector-field')?.querySelector('.inspector-fu')?.textContent ||
+      el.closest('.inspector-field-sm')?.querySelector('.inspector-fu')?.textContent ||
+      ''
+    );
   }
 
   // ── Panel drag ──
@@ -2615,30 +2653,6 @@
   }
 
   function wireUpInputs(panel, sel) {
-    // Resolve the CSS value to apply, given the input's raw text + displayed unit.
-    // Special cases:
-    //   - opacity with % unit: 50 → "0.5" (CSS opacity is 0-1, not 0-100)
-    //   - ° unit (rotate): 45 → "45deg"
-    //   - numeric value + numeric unit: "32" + "px" → "32px"
-    //   - non-numeric ("auto", "normal"): pass through as-is
-    function cssValueFor(prop, raw, unit) {
-      if (raw === '' || raw === '-' || raw == null) return null; // mid-typing
-      const trimmed = String(raw).trim();
-      const num = parseFloat(trimmed);
-      if (isNaN(num)) return trimmed; // 'auto', 'normal', etc.
-      if (prop === 'opacity' && unit === '%') return String(num / 100);
-      if (unit === '°') return num + 'deg';
-      if (unit) return num + unit;
-      return String(num);
-    }
-    function unitFor(el) {
-      return (
-        el.closest('.inspector-field')?.querySelector('.inspector-fu')?.textContent ||
-        el.closest('.inspector-field-sm')?.querySelector('.inspector-fu')?.textContent ||
-        ''
-      );
-    }
-
     panel.querySelectorAll('.inspector-field input, .inspector-field-sm input').forEach(input => {
       if (input.dataset._wired) return;
       input.dataset._wired = '1';
@@ -2710,19 +2724,21 @@
         document.addEventListener('mouseup', onUp);
         document.body.style.cursor = 'ew-resize';
         document.body.style.userSelect = 'none';
+        suppressIframePointerEvents(true);
       });
 
       function onMove(e) {
         if (!input) return;
         const delta = e.clientX - startX;
         const multiplier = e.shiftKey ? 10 : 1;
-        const unit = input.closest('.inspector-field, .inspector-field-sm')?.querySelector('.inspector-fu')?.textContent || '';
+        const unit = unitFor(input);
         let newVal = Math.round(startVal + delta * multiplier);
         if (unit === '%') newVal = Math.min(100, Math.max(0, newVal));
         input.value = String(newVal);
         const prop = input.dataset.prop;
-        if (selectedElement && prop) {
-          selectedElement.style.setProperty(prop, newVal + unit);
+        const cssValue = cssValueFor(prop, String(newVal), unit);
+        if (selectedElement && prop && cssValue != null) {
+          selectedElement.style.setProperty(prop, cssValue);
         }
       }
 
@@ -2731,11 +2747,13 @@
         document.removeEventListener('mouseup', onUp);
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
+        suppressIframePointerEvents(false);
         if (input) {
           const prop = input.dataset.prop;
           const from = input.dataset.from;
-          const unit = input.closest('.inspector-field, .inspector-field-sm')?.querySelector('.inspector-fu')?.textContent || '';
-          trackChange(sel, prop, from, input.value + unit);
+          const unit = unitFor(input);
+          const cssValue = cssValueFor(prop, input.value, unit);
+          if (cssValue != null) trackChange(sel, prop, from, cssValue);
           input = null;
         }
       }
