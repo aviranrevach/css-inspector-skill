@@ -4,7 +4,7 @@
   "private": true,
   "description": "Visual CSS inspector skill for Claude Code",
   "scripts": {
-    "test": "node --test tests/test-overlay-loads.js tests/test-selector.js tests/test-tracker.js tests/test-prompt.js",
+    "test": "node --test tests/test-overlay-loads.js tests/test-selector.js tests/test-tracker.js tests/test-prompt.js tests/test-area.js",
     "test:e2e": "playwright test",
     "test:all": "npm test && npm run test:e2e"
   },

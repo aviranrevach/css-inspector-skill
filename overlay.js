@@ -22,8 +22,67 @@
     return parts.join(' > ');
   }
 
+  // ── Area-mode helpers ─────────────────────────────────────────────────────
+  // "Area mode" lets the user shift-click multiple elements to form a group.
+  // The group powers the "this selected area" chat workflow (parallel to
+  // "the selected element"). Helpers are pure so they can be unit-tested
+  // without a real DOM.
+  function findCommonAncestor(els) {
+    if (!els || els.length === 0) return null;
+    if (els.length === 1) return els[0].parentElement || null;
+    let cur = els[0];
+    while (cur) {
+      if (els.every((el) => cur.contains(el))) return cur;
+      cur = cur.parentElement;
+    }
+    return null;
+  }
+
+  function unionBoundingRect(els) {
+    if (!els || els.length === 0) return null;
+    let x = Infinity, y = Infinity, right = -Infinity, bottom = -Infinity;
+    for (const el of els) {
+      const r =
+        typeof el.getBoundingClientRect === 'function'
+          ? el.getBoundingClientRect()
+          : el; // tests can pass plain { left, top, right, bottom } literals
+      const l = r.left ?? r.x ?? 0;
+      const t = r.top ?? r.y ?? 0;
+      const ri = r.right ?? l + (r.width ?? 0);
+      const bo = r.bottom ?? t + (r.height ?? 0);
+      if (l < x) x = l;
+      if (t < y) y = t;
+      if (ri > right) right = ri;
+      if (bo > bottom) bottom = bo;
+    }
+    return { x, y, width: right - x, height: bottom - y, right, bottom };
+  }
+
+  function buildAreaContext(elements, computeSelectorFn = computeSelector) {
+    if (!elements || elements.length === 0) return '';
+    const lines = elements.map(
+      (el) => `- ${computeSelectorFn(el)} (${(el.tagName || '').toLowerCase()})`
+    );
+    const ancestor = findCommonAncestor(elements);
+    const ancestorSel = ancestor ? computeSelectorFn(ancestor) : 'document';
+    const rect = unionBoundingRect(elements);
+    const rectLine = rect
+      ? `${Math.round(rect.width)}×${Math.round(rect.height)} at (${Math.round(rect.x)}, ${Math.round(rect.y)})`
+      : 'unknown bounds';
+    return `Selected area (${elements.length} elements):
+${lines.join('\n')}
+
+Common parent: ${ancestorSel}
+Bounding box: ${rectLine}`;
+  }
+
   if (typeof module !== 'undefined') {
-    module.exports = { computeSelector };
+    module.exports = {
+      computeSelector,
+      findCommonAncestor,
+      unionBoundingRect,
+      buildAreaContext,
+    };
   }
 
   // ── Browser-only from here ────────────────────────────────────────────────
@@ -382,6 +441,30 @@
 
     /* Picker highlight + tooltip */
     .__inspector-highlight { outline: 2px solid #3B82F6 !important; outline-offset: 1px !important; cursor: crosshair !important; }
+    /* Area mode — persistent dashed outline on grouped elements (different
+       color from picker hover so the two states are visually distinct). */
+    .__inspector-area { outline: 2px dashed #DA7756 !important; outline-offset: 1px !important; }
+
+    /* Area bar — sits between header and tabs, visible only when an area
+       is being built via ⇧-click in pick mode. */
+    #__inspector-area-bar {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 10px; background: #1c1c1c;
+      border-bottom: 1px solid #252525; flex-shrink: 0;
+      color: #DA7756; font-size: 10px;
+    }
+    #__inspector-area-bar svg { width: 12px; height: 12px; flex-shrink: 0; }
+    #__inspector-area-bar .area-count {
+      flex: 1; font-weight: 500; color: #DA7756;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    #__inspector-area-bar button {
+      background: none; border: 1px solid rgba(218,119,86,0.4);
+      border-radius: 4px; color: #DA7756; font-size: 10px;
+      padding: 3px 8px; cursor: pointer; font-family: Inter, system-ui, sans-serif;
+    }
+    #__inspector-area-bar button:hover { border-color: #DA7756; background: rgba(218,119,86,0.08); }
+    #__inspector-area-bar #__inspector-area-clear { padding: 3px 6px; }
     #__inspector-tooltip {
       position: fixed; background: #1a1a1a; border: 1px solid #333; border-radius: 4px;
       padding: 4px 8px; font-size: 11px; color: #888; pointer-events: none; z-index: 1000000; display: none;
@@ -741,6 +824,10 @@
         outline-offset: 1px !important;
         cursor: crosshair !important;
       }
+      .__inspector-area {
+        outline: 2px dashed #DA7756 !important;
+        outline-offset: 1px !important;
+      }
     `;
     targetDoc.head.appendChild(targetStyleEl);
   }
@@ -751,6 +838,11 @@
   const changes = [];
   const redoStack = [];
   const cssMap = window.__inspectorCssMap || {};
+  // Area mode: a group of elements built via ⇧-click during pick mode. Used
+  // for the "this selected area" chat reference workflow. Orthogonal to
+  // selectedElement (which still drives the Design tab); clearing area
+  // doesn't clear the single-element selection and vice versa.
+  const selectedArea = [];
 
   // ── Color math utilities ──────────────────────────────────────────────────
   function hsvToRgb(h, s, v) {
@@ -849,6 +941,14 @@
         <button id="__inspector-minimize" data-tip="Minimize — collapse panel to header bar">—</button>
         <button id="__inspector-close" data-tip="Close inspector">✕</button>
       </div>
+    </div>
+    <div id="__inspector-area-bar" style="display:none;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="3 3"/>
+      </svg>
+      <span class="area-count" id="__inspector-area-count">area · 0 els</span>
+      <button id="__inspector-area-copy" data-tip='Copy area context — paste into Claude to discuss "this selected area"'>Copy</button>
+      <button id="__inspector-area-clear" data-tip="Clear area selection">✕</button>
     </div>
     <div id="__inspector-tabs">
       <span class="inspector-tab active" data-tab="design">Design</span>
@@ -1017,6 +1117,9 @@
   });
 
   root.querySelector('#__inspector-close').addEventListener('click', () => {
+    targetDoc.querySelectorAll('.__inspector-area').forEach((el) =>
+      el.classList.remove('__inspector-area')
+    );
     root.remove();
     tooltip.remove();
     styleEl.remove();
@@ -1141,7 +1244,13 @@
     }
 
     const sel = computeSelector(selectedElement);
-    treePopup.innerHTML = html + `<div class="tree-hint">Tip: tell Claude <span class="tree-hint-key">"the selected element"</span> to discuss <span class="tree-hint-sel">${sel}</span></div>`;
+    let hint = `<div class="tree-hint">Tip: tell Claude <span class="tree-hint-key">"the selected element"</span> to discuss <span class="tree-hint-sel">${sel}</span></div>`;
+    if (selectedArea.length > 0) {
+      hint += `<div class="tree-hint">Or <span class="tree-hint-key">"this selected area"</span> for the <span class="tree-hint-sel">${selectedArea.length}-element</span> area · ⇧-click to add more</div>`;
+    } else {
+      hint += `<div class="tree-hint" style="opacity:.6;">⇧-click any element in pick mode to build a <span class="tree-hint-key">"selected area"</span> for chat</div>`;
+    }
+    treePopup.innerHTML = html + hint;
 
     const allEls = [...ancestors, selectedElement, ...siblings];
     treePopup.querySelectorAll('.tree-row').forEach((row) => {
@@ -2909,7 +3018,9 @@
     tooltip.style.display = 'block';
     tooltip.style.left = (rect.left + e.clientX + 12) + 'px';
     tooltip.style.top = (rect.top + e.clientY + 12) + 'px';
-    tooltip.textContent = computeSelector(e.target);
+    // Tooltip hints at the ⇧-click area-grouping when shift is held.
+    const sel = computeSelector(e.target);
+    tooltip.textContent = e.shiftKey ? `⇧ add to area · ${sel}` : sel;
   }
 
   function setSelection(el) {
@@ -2927,6 +3038,74 @@
     renderDesignPanel();
   }
 
+  // ── Area-mode runtime ─────────────────────────────────────────────────────
+  function renderAreaBar() {
+    const bar = root.querySelector('#__inspector-area-bar');
+    const count = root.querySelector('#__inspector-area-count');
+    if (!bar || !count) return;
+    if (selectedArea.length === 0) {
+      bar.style.display = 'none';
+      return;
+    }
+    bar.style.display = 'flex';
+    count.textContent = `area · ${selectedArea.length} el${selectedArea.length === 1 ? '' : 's'}`;
+  }
+
+  function highlightArea() {
+    targetDoc.querySelectorAll('.__inspector-area').forEach((el) =>
+      el.classList.remove('__inspector-area')
+    );
+    selectedArea.forEach((el) => el.classList.add('__inspector-area'));
+  }
+
+  function clearArea() {
+    selectedArea.length = 0;
+    highlightArea();
+    renderAreaBar();
+  }
+
+  function toggleAreaMembership(el) {
+    const idx = selectedArea.indexOf(el);
+    if (idx >= 0) {
+      selectedArea.splice(idx, 1);
+    } else {
+      // First ⇧-click seeds the area with the currently-picked single element
+      // so a one-click→shift-click flow grows naturally from 1 → 2.
+      if (
+        selectedArea.length === 0 &&
+        selectedElement &&
+        selectedElement !== el &&
+        !selectedArea.includes(selectedElement)
+      ) {
+        selectedArea.push(selectedElement);
+      }
+      if (!selectedArea.includes(el)) selectedArea.push(el);
+    }
+    highlightArea();
+    renderAreaBar();
+  }
+
+  function copyAreaContext() {
+    if (selectedArea.length === 0) return;
+    const text = buildAreaContext(selectedArea, computeSelector);
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = root.querySelector('#__inspector-area-copy');
+      if (!btn) return;
+      const original = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(() => {
+        btn.textContent = original;
+      }, 1500);
+    });
+  }
+
+  root
+    .querySelector('#__inspector-area-copy')
+    ?.addEventListener('click', copyAreaContext);
+  root
+    .querySelector('#__inspector-area-clear')
+    ?.addEventListener('click', clearArea);
+
   function onPickRightClick(e) {
     if (e.target.closest('#__inspector-root')) return;
     e.preventDefault();
@@ -2942,6 +3121,12 @@
     if (e.target.closest('#__inspector-root')) return;
     e.preventDefault();
     e.stopPropagation();
+    if (e.shiftKey) {
+      // Area mode: add/remove from group, stay in pick mode so the user
+      // can keep ⇧-clicking. Does NOT change selectedElement or open Design.
+      toggleAreaMembership(e.target);
+      return;
+    }
     setSelection(e.target);
     exitPickMode();
     switchTab('design');
