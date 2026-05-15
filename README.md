@@ -31,13 +31,22 @@ A bottom Changes bar tracks every edit with undo / redo. Click **Copy Prompt** a
 
 ### Talk to Claude about what you're pointing at
 
-The inspector also doubles as a **visual selection layer for chat**. Pick any element on the page and the selector pill at the top shows what's currently selected (e.g. `.card`). Switch back to Claude in VS Code and reference it directly:
+The inspector also doubles as a **visual selection layer for chat**. Two phrases, two scales:
+
+**"The selected element"** — pick a single element. The selector pill at the top shows what's currently selected (e.g. `.card`). Switch back to Claude in VS Code and reference it directly:
 
 > "rewrite the layout of the selected element to use grid"
 > "what's wrong with the spacing on the selected element?"
-> "the selected element + its siblings should be a flex row"
 
-Claude picks up the reference from the running skill context — it's the same point-and-discuss feel as Claude's design canvas, but for the code in front of you. No DevTools, no copying selectors by hand. Right-click a picked element to see this tip spelled out in the element-tree popup, next to the parent / sibling chain.
+**"This selected area"** — **⇧-click multiple elements** while in pick mode to build a group. An area bar appears showing "area · N els" with a **Copy** button that puts a structured description on your clipboard (each member's selector, the common parent, the bounding box). Useful when you want to talk about a *region*, not a node:
+
+> "this selected area should become a sticky header"
+> "rewrite this selected area as a 3-column grid on desktop, stack on mobile"
+> "what's the simplest refactor for this selected area?"
+
+It's the same point-and-discuss feel as Claude's design canvas, but for the code in front of you. No DevTools, no copying selectors by hand. The single-element pick and the area selection are independent — pick `.card` to edit it in the Design tab, ⇧-click in its siblings to talk to Claude about the whole row, no conflict.
+
+Right-click a picked element to see both phrases spelled out in the element-tree popup.
 
 ### Who it's for
 

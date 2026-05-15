@@ -28,6 +28,15 @@ release.
     parent / sibling navigation without leaving picker mode.
   - Bottom **Changes bar**: undo / redo + "Changes to execute" pill that
     expands into the per-change list; Copy Prompt lives in the pill.
+- **Area-selection mode.** ⇧-click multiple elements while in pick mode
+  to build a group; an area bar between header and tabs shows
+  "area · N els" with **Copy** (clipboard) and **✕** (clear) buttons.
+  Parallel to the single-element "the selected element" workflow, the
+  group powers the **"this selected area"** chat reference — useful for
+  refactor / layout asks that span multiple elements without committing
+  to specific CSS edits. Area members get a persistent dashed coral
+  outline; single-element selection (which drives the Design tab) is
+  orthogonal.
 - `bin/install` and `bin/uninstall` — symlink-based deploy so
   `~/.claude/skills/css-inspector` always points at the repo HEAD. Honors
   `CLAUDE_SKILLS_DIR` for non-standard layouts.
