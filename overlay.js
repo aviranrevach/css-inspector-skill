@@ -1,8 +1,33 @@
 (function () {
   'use strict';
 
-  // ── Guard: don't inject twice ──────────────────────────────────────────────
-  if (typeof document === 'undefined') return; // node import (unit tests)
+  // ── Pure helpers (testable from node; safe to run with no DOM) ────────────
+  function computeSelector(el) {
+    if (!el || !el.tagName) return '';
+    if (el.id) return `#${el.id}`;
+    const classes = Array.from(el.classList || [])
+      .filter(c => c && !c.startsWith('__inspector'))
+      .slice(0, 2);
+    if (classes.length) return '.' + classes.join('.');
+    const parts = [];
+    let current = el;
+    while (current && current.tagName && parts.length < 3) {
+      let part = current.tagName.toLowerCase();
+      if (current.id) { parts.unshift(`#${current.id}`); break; }
+      const cls = Array.from(current.classList || []).filter(c => !c.startsWith('__inspector'))[0];
+      if (cls) part += `.${cls}`;
+      parts.unshift(part);
+      current = current.parentElement;
+    }
+    return parts.join(' > ');
+  }
+
+  if (typeof module !== 'undefined') {
+    module.exports = { computeSelector };
+  }
+
+  // ── Browser-only from here ────────────────────────────────────────────────
+  if (typeof document === 'undefined') return;
   if (document.getElementById('__inspector-root')) return;
 
   // ── Resolve inspection target ──────────────────────────────────────────────
@@ -1458,24 +1483,8 @@
   }, true);
 
   // ── Forward declarations (stubs — filled in by Tasks 7-10) ────────────────
-  function computeSelector(el) {
-    if (el.id) return `#${el.id}`;
-    const classes = Array.from(el.classList)
-      .filter(c => c && !c.startsWith('__inspector'))
-      .slice(0, 2);
-    if (classes.length) return '.' + classes.join('.');
-    const parts = [];
-    let current = el;
-    while (current && current.tagName && parts.length < 3) {
-      let part = current.tagName.toLowerCase();
-      if (current.id) { parts.unshift(`#${current.id}`); break; }
-      const cls = Array.from(current.classList).filter(c => !c.startsWith('__inspector'))[0];
-      if (cls) part += `.${cls}`;
-      parts.unshift(part);
-      current = current.parentElement;
-    }
-    return parts.join(' > ');
-  }
+  // computeSelector is defined at module scope (above) — boot picks it up via closure.
+
   function trackChange(selector, property, from, to) {
     const file = cssMap[selector]?.[property]?.file ?? null;
     const line = cssMap[selector]?.[property]?.line ?? null;
@@ -2939,10 +2948,5 @@
   }
 
   } // ── end boot() ───────────────────────────────────────────────────────────
-
-  // ── Conditional export for Node.js unit tests ─────────────────────────────
-  if (typeof module !== 'undefined') {
-    module.exports = { /* boot-scoped helpers are not exposed; tests duplicate logic */ };
-  }
 
 })();

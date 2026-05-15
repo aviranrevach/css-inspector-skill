@@ -1,24 +1,9 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
-function computeSelector(el) {
-  if (el.id) return `#${el.id}`;
-  const classes = Array.from(el.classList || [])
-    .filter(c => c && !c.startsWith('__inspector'))
-    .slice(0, 2);
-  if (classes.length) return '.' + classes.join('.');
-  const parts = [];
-  let current = el;
-  while (current && current.tagName && parts.length < 3) {
-    let part = current.tagName.toLowerCase();
-    if (current.id) { parts.unshift(`#${current.id}`); break; }
-    const cls = Array.from(current.classList || []).filter(c => !c.startsWith('__inspector'))[0];
-    if (cls) part += `.${cls}`;
-    parts.unshift(part);
-    current = current.parentElement;
-  }
-  return parts.join(' > ');
-}
+// Import the real computeSelector from overlay.js — not a copy.
+// This guarantees the tests fail if overlay.js diverges or breaks.
+const { computeSelector } = require('../overlay.js');
 
 test('prefers id when present', () => {
   const el = { id: 'main-heading', classList: ['hero-title'], tagName: 'H1', parentElement: null };
@@ -46,4 +31,10 @@ test('stops tag path at named ancestor', () => {
 test('filters out __inspector classes', () => {
   const el = { id: '', classList: ['__inspector-highlight', 'card'], tagName: 'DIV', parentElement: null };
   assert.equal(computeSelector(el), '.card');
+});
+
+test('handles null / undefined elements', () => {
+  assert.equal(computeSelector(null), '');
+  assert.equal(computeSelector(undefined), '');
+  assert.equal(computeSelector({}), '');
 });

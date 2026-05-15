@@ -1,6 +1,9 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
+// TODO: extract the real tracker from overlay.js (currently lives inside boot()
+// with DOM side-effects baked in). Until then this copy reflects the intended
+// behaviour; keep in sync with overlay.js trackChange/undoChange when those change.
 function createTracker() {
   const changes = [];
 

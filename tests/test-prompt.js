@@ -1,6 +1,8 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
+// TODO: extract generateCopyPrompt from overlay.js (currently boot-scoped).
+// Until then this copy reflects the intended output; keep in sync.
 function generateCopyPrompt(changes) {
   if (changes.length === 0) return 'No changes to apply.';
   const lines = changes.map(c =>
