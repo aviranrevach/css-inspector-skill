@@ -30,11 +30,11 @@ release.
     expands into the per-change list; Copy Prompt lives in the pill.
 - **"Talk to Claude" chat workflow** — pick any element and reference
   it in your next message as "the selected element" for single-node
-  asks. For region-level refactors, pick a wrapper element (a `div`,
-  `section`, `.hero`, etc.) and say "treat the selected element as an
-  area." No structured handoff, no new mode — the running skill
-  context resolves the reference. The element-tree popup surfaces this
-  tip when you right-click a picked element.
+  asks, or pick a wrapper (a `div`, `section`, `.hero`, etc.) and say
+  "the selected area" for region-level refactors. Same picker,
+  parallel phrasing — no structured handoff, no new mode. The running
+  skill context resolves the reference. The element-tree popup
+  surfaces both phrases when you right-click a picked element.
 - `bin/install` and `bin/uninstall` — symlink-based deploy so
   `~/.claude/skills/css-inspector` always points at the repo HEAD. Honors
   `CLAUDE_SKILLS_DIR` for non-standard layouts.

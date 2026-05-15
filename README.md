@@ -37,13 +37,13 @@ The inspector also doubles as a **visual selection layer for chat**. Pick any el
 > "what's wrong with the spacing on the selected element?"
 > "the selected element + its siblings should be a flex row"
 
-**Region-level asks: pick a container, call it an area.** Want to discuss a whole strip of the page, not one node? Pick a wrapper element (a `div`, `section`, `main`, `.hero`, `.card` — whatever contains the region) and tell Claude to treat it as an area:
+**Region-level asks — "the selected area".** Want to discuss a whole strip of the page, not one node? Pick a wrapper element (a `div`, `section`, `main`, `.hero`, `.card` — whatever contains the region) and refer to it as the area:
 
-> "treat the selected element as an area — rewrite it as a 3-column grid"
-> "what's the simplest refactor for this area?"
-> "this is the area I want to redesign — start with the spacing"
+> "rewrite the selected area as a 3-column grid"
+> "what's the simplest refactor for the selected area?"
+> "the selected area should become a sticky header"
 
-No special mode, no shift-click, no extra UI. The single-element picker is the area picker — Claude infers from your framing whether you want to nudge one property or restructure a region. Claude picks up the reference from the running skill context — it's the same point-and-discuss feel as Claude's design canvas, but for the code in front of you. Right-click a picked element to see this tip spelled out in the element-tree popup.
+No new mode, no shift-click, no extra UI. Same picker, parallel phrasing — *"the selected element"* nudges a node, *"the selected area"* restructures a region. Claude infers from your framing which one you mean. It's the same point-and-discuss feel as Claude's design canvas, but for the code in front of you. Right-click a picked element to see this tip spelled out in the element-tree popup.
 
 ### Who it's for
 

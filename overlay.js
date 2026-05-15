@@ -1143,7 +1143,7 @@
     const sel = computeSelector(selectedElement);
     treePopup.innerHTML =
       html +
-      `<div class="tree-hint">Tip: tell Claude <span class="tree-hint-key">"the selected element"</span> for <span class="tree-hint-sel">${sel}</span>, or <span class="tree-hint-key">"treat this as an area"</span> for a region — pick a container first (div / section).</div>`;
+      `<div class="tree-hint">Tip: tell Claude <span class="tree-hint-key">"the selected element"</span> for <span class="tree-hint-sel">${sel}</span>, or <span class="tree-hint-key">"the selected area"</span> for a region — pick a container first (div / section).</div>`;
 
     const allEls = [...ancestors, selectedElement, ...siblings];
     treePopup.querySelectorAll('.tree-row').forEach((row) => {
