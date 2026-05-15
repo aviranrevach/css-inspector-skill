@@ -29,6 +29,16 @@ Every value previews live. Numeric inputs scrub on horizontal drag. The color pi
 
 A bottom Changes bar tracks every edit with undo / redo. Click **Copy Prompt** and paste back into Claude — the prompt carries a structured `<changes>` JSON block (`selector`, `property`, `from`, `to`, `file`, `line`) so Claude knows exactly which file and which line to touch. No more "make the title bigger" round-trips; no more Claude rewriting a whole rule when you only wanted to change one value.
 
+### Talk to Claude about what you're pointing at
+
+The inspector also doubles as a **visual selection layer for chat**. Pick any element on the page and the selector pill at the top shows what's currently selected (e.g. `.card`). Switch back to Claude in VS Code and reference it directly:
+
+> "rewrite the layout of the selected element to use grid"
+> "what's wrong with the spacing on the selected element?"
+> "the selected element + its siblings should be a flex row"
+
+Claude picks up the reference from the running skill context — it's the same point-and-discuss feel as Claude's design canvas, but for the code in front of you. No DevTools, no copying selectors by hand. Right-click a picked element to see this tip spelled out in the element-tree popup, next to the parent / sibling chain.
+
 ### Who it's for
 
 Built for **vibe coders who left Cursor for Claude inside VS Code** and miss the visual muscle memory their old tools (Webflow, Figma, Chrome DevTools) trained into their hands. Use it to keep your craft sharp while Claude does the typing.
