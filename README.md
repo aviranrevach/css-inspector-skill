@@ -1,4 +1,4 @@
-# CSS Inspector — Claude Code Skill
+# CSS Inspector- Claude Code Skill
 
 A visual CSS inspector that lives inside your browser, built for Claude Code. Pick any element on your page, tweak its styles in real time, then let Claude apply the changes back to your source files — no DevTools, no manual diffs.
 
@@ -6,25 +6,41 @@ A visual CSS inspector that lives inside your browser, built for Claude Code. Pi
 
 ## What it does
 
-The inspector docks to the top-right of your page (draggable, resizable, minimizable). Click **Select**, pick any element, and edit its styles in four collapsible sections:
+Two things in one panel: **inspect any element visually**, then **hand the changes off to Claude cleanly**.
 
-| Section | Properties |
-|---|---|
+You're vibe coding in Claude inside VS Code. The chat is fast, the diffs are clean — but the moment you need to nudge a padding by 4 px or tweak a hex value, you're back to typing "make the hero title a bit bigger and the spacing tighter" and re-reading Claude's edit. That's the gap this skill closes.
+
+It's a visual editor that lives in your page, with **Webflow- and Figma-shaped controls** and an AI hand-off built in. Pick any element, drag its values around with real sliders, scrubs, and color pickers, and when you're happy, paste one prompt back into Claude. Claude reads the structured change set, finds each rule in your source files, applies the edit at the right line, and shows you a diff before writing.
+
+### Inspect & tweak visually
+
+Draggable, resizable, minimizable panel docked top-right. Click **Select**, pick any element, and edit:
+
+| Section | Controls |
+| --- | --- |
 | Position | X / Y / Z, rotation, flip |
-| Layout | flow (block/flex/grid/inline), width × height, padding & margin diagram, clip-content, border-box |
-| Appearance | opacity, border-radius, fill, stroke, shadow |
-| Typography | font family, size, weight, line height, color |
+| Layout | flow (block / flex / grid / inline), width × height, padding & margin diagram, clip-content, border-box |
+| Appearance | opacity, border-radius, fill, stroke, shadow, layers |
+| Typography | font family, size, weight, line height, letter spacing, color |
 
-Every change previews live on the page. Prefer raw CSS? The **CSS Raw** tab shows the matched stylesheet rules as editable text and can apply them back to the change tracker.
+Every value previews live. Numeric inputs scrub on horizontal drag. The color picker handles solid + linear-gradient with an eyedropper. Right-click a picked element to walk parents and siblings in the element-tree popup. Prefer raw CSS? The **CSS Raw** tab is right there.
 
-When you're done, the bottom **Changes** bar shows undo / redo and a count of tracked edits. Click the pill to expand the list, then **Copy Prompt** — and paste back into Claude. Claude reads the structured `<changes>` block, updates the source files precisely, shows you a diff, and asks for confirmation before saving.
+### Hand off to AI cleanly
+
+A bottom Changes bar tracks every edit with undo / redo. Click **Copy Prompt** and paste back into Claude — the prompt carries a structured `<changes>` JSON block (`selector`, `property`, `from`, `to`, `file`, `line`) so Claude knows exactly which file and which line to touch. No more "make the title bigger" round-trips; no more Claude rewriting a whole rule when you only wanted to change one value.
+
+### Who it's for
+
+Built for **vibe coders who left Cursor for Claude inside VS Code** and miss the visual muscle memory their old tools (Webflow, Figma, Chrome DevTools) trained into their hands. Use it to keep your craft sharp while Claude does the typing.
+
+> **Coming soon:** design-system awareness. The inspector will detect your tokens (CSS variables, Tailwind theme, design-system primitives) and let you pick from named values instead of raw px / hex — so changes stay on-system.
 
 ---
 
 ## How it attaches
 
 | Project type | How it attaches |
-|---|---|
+| --- | --- |
 | Static HTML + CSS | Serves your files locally on port 8787, wraps `index.html` in an iframe inside `inspector.html` |
 | Vite / React / Vue / Next.js | Temporarily injects a `<script>` tag into your `index.html` (or `public/index.html`) — removed automatically when done |
 
@@ -36,11 +52,7 @@ Claude detects which mode to use. If it's ambiguous, it asks.
 
 Say any of these in Claude Code:
 
-> "inspect my page"
-> "let me tweak the styles"
-> "visual CSS editor"
-> "open the CSS inspector"
-> "I want to edit styles visually"
+> "inspect my page" "let me tweak the styles" "visual CSS editor" "open the CSS inspector" "I want to edit styles visually"
 
 ---
 
@@ -177,3 +189,7 @@ Cold dark neutrals (`#1c1c1c` panel, `#d4d4d4` text) with Claude coral (`#DA7756
 ## Architecture notes
 
 `overlay.js` is iframe-aware. In static mode the inspector page wraps the user's `index.html` in an `<iframe>`, and the overlay panel lives in the parent document. The overlay resolves `targetDoc` / `targetWin` from `iframe.contentDocument` after the frame's `load` event, then binds the picker listeners, `getComputedStyle` reads, and `document.styleSheets` iteration against the iframe's document — so a click inside the iframe is observed correctly by a panel that lives outside it.
+
+---
+
+Built by Aviran Revach · [Github](https://github.com/aviranrevach)
