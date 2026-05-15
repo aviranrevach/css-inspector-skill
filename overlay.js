@@ -201,6 +201,32 @@
     .inspector-tab:hover { color: #888; }
     .inspector-tab.active { color: #fff; border-bottom-color: #fff; }
     .inspector-tab.disabled { color: #2e2e2e; cursor: not-allowed; pointer-events: none; }
+    /* Right-aligned end tab (e.g. About) — pushed to the far right of the row. */
+    .inspector-tab-end { margin-left: auto; }
+
+    /* ── About panel ──────────────────────────────────────────────────────── */
+    #__inspector-panel-about { padding: 16px 14px; color: #aaa; font-size: 11px; line-height: 1.55; }
+    #__inspector-panel-about h3 { font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 8px; }
+    #__inspector-panel-about p { margin-bottom: 10px; }
+    #__inspector-panel-about strong { color: #e0e0e0; font-weight: 600; }
+    .__inspector-about-sep {
+      height: 1px; background: #252525; margin: 14px 0 12px;
+    }
+    .__inspector-about-author {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 11px; color: #ccc; font-weight: 500;
+    }
+    .__inspector-about-links {
+      display: flex; gap: 6px; margin-left: auto;
+    }
+    .__inspector-about-links a {
+      display: flex; align-items: center; justify-content: center;
+      width: 28px; height: 28px; border-radius: 6px;
+      background: none; border: 1px solid #2e2e2e;
+      color: #888; text-decoration: none; transition: color .12s, border-color .12s;
+    }
+    .__inspector-about-links a:hover { color: #fff; border-color: #444; }
+    .__inspector-about-links a svg { width: 15px; height: 15px; }
 
     /* Tab panels */
     #__inspector-panels { overflow-y: auto; flex: 1; scrollbar-width: none; }
@@ -913,10 +939,12 @@
     <div id="__inspector-tabs">
       <span class="inspector-tab active" data-tab="design">Design</span>
       <span class="inspector-tab" data-tab="raw">CSS Raw</span>
+      <span class="inspector-tab inspector-tab-end" data-tab="about">About</span>
     </div>
     <div id="__inspector-panels">
       <div class="inspector-panel active" id="__inspector-panel-design"></div>
       <div class="inspector-panel" id="__inspector-panel-raw"></div>
+      <div class="inspector-panel" id="__inspector-panel-about"></div>
     </div>
     <div id="__inspector-changes-bar">
       <div class="changes-bar-drawer" id="__inspector-bar-drawer"></div>
@@ -1070,6 +1098,35 @@
     });
     if (tabName === 'design') renderDesignPanel();
     if (tabName === 'raw') renderCssRaw();
+    if (tabName === 'about') renderAbout();
+  }
+
+  function renderAbout() {
+    const panel = root.querySelector('#__inspector-panel-about');
+    if (!panel || panel.dataset._rendered) return;
+    panel.dataset._rendered = '1';
+    panel.innerHTML = `
+      <h3>CSS Inspector</h3>
+      <p>A visual CSS inspector for Claude Code. Pick any element on your page, tweak its styles with sliders, scrubs, and color pickers — then hand the changes off to Claude with one paste. Built for vibe coders who left Cursor for Claude in VS Code and miss the visual muscle memory Webflow / Figma / DevTools trained into their hands.</p>
+      <p>The Copy button next to the selector pill puts a chat-ready intro on your clipboard. Pick a leaf element to discuss <strong>"this element"</strong>, or a container (div / section) to discuss <strong>"this area"</strong>.</p>
+      <div class="__inspector-about-sep"></div>
+      <div class="__inspector-about-author">
+        <span>By <strong>Aviran Revach</strong></span>
+        <div class="__inspector-about-links">
+          <a href="https://github.com/aviranrevach" target="_blank" rel="noopener noreferrer" data-tip="GitHub: aviranrevach">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.55v-1.94c-3.2.7-3.87-1.54-3.87-1.54-.52-1.33-1.28-1.68-1.28-1.68-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.28 1.18-3.09-.12-.29-.51-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.79 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.12 3.05.74.81 1.18 1.83 1.18 3.09 0 4.42-2.69 5.39-5.26 5.68.41.36.78 1.06.78 2.13v3.15c0 .3.21.66.8.55 4.56-1.52 7.85-5.83 7.85-10.91C23.5 5.65 18.35.5 12 .5z"/>
+            </svg>
+          </a>
+          <a href="https://www.aviranr.com/" target="_blank" rel="noopener noreferrer" data-tip="Website: aviranr.com">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M2 12h20"/>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+            </svg>
+          </a>
+        </div>
+      </div>`;
   }
 
   root.querySelectorAll('.inspector-tab').forEach(tab => {
