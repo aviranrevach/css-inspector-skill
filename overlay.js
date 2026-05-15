@@ -403,6 +403,7 @@
     #__inspector-tooltip {
       position: fixed; background: #1a1a1a; border: 1px solid #333; border-radius: 4px;
       padding: 4px 8px; font-size: 11px; color: #888; pointer-events: none; z-index: 1000000; display: none;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
     /* Custom panel tooltip */
@@ -414,6 +415,9 @@
       opacity: 0; transition: opacity 0.12s;
       border: 1px solid #222;
       box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      /* Tooltip element is appended to document.body, not #__inspector-root,
+         so it doesn't inherit the panel's font. Set it explicitly. */
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     }
     #__inspector-panel-tip.show { opacity: 1; }
 
@@ -1428,6 +1432,20 @@
     colorPopup.onkeydown = (e) => { if (e.key === 'Escape') closeColorPicker(true); };
   }
 
+  // ── Helper: suppress iframe pointer events during a drag ──
+  // The inspector panel lives in the parent document. When a drag is in
+  // progress and the cursor crosses into the iframe area, mouse events go
+  // to the iframe's contentDocument instead of the parent — so the parent's
+  // mousemove listener stops firing and the drag "sticks" mid-motion. By
+  // setting pointer-events:none on the iframe while a drag is active, we
+  // force every move event back to the parent doc.
+  function suppressIframePointerEvents(suppress) {
+    if (targetDoc === document) return; // live mode: no iframe, nothing to do
+    const iframe = document.querySelector('iframe');
+    if (!iframe) return;
+    iframe.style.pointerEvents = suppress ? 'none' : '';
+  }
+
   // ── Panel drag ──
   function initDrag() {
     const header = root.querySelector('#__inspector-header');
@@ -1447,6 +1465,7 @@
       document.addEventListener('mousemove', onDragMove);
       document.addEventListener('mouseup', onDragUp);
       document.body.style.userSelect = 'none';
+      suppressIframePointerEvents(true);
     });
 
     function onDragMove(e) {
@@ -1462,6 +1481,7 @@
       document.removeEventListener('mousemove', onDragMove);
       document.removeEventListener('mouseup', onDragUp);
       document.body.style.userSelect = '';
+      suppressIframePointerEvents(false);
     }
   }
 
@@ -1478,6 +1498,7 @@
       document.addEventListener('mouseup', onResizeUp);
       document.body.style.userSelect = 'none';
       document.body.style.cursor = 'ns-resize';
+      suppressIframePointerEvents(true);
     });
 
     function onResizeMove(e) {
@@ -1491,6 +1512,7 @@
       document.removeEventListener('mouseup', onResizeUp);
       document.body.style.userSelect = '';
       document.body.style.cursor = '';
+      suppressIframePointerEvents(false);
     }
   }
 
@@ -1878,6 +1900,7 @@
           if (!dragging) {
             if (needsThreshold && Math.abs(delta) < 3) return;
             dragging = true;
+            suppressIframePointerEvents(true);
             document.body.style.cursor = 'ew-resize';
             document.body.style.userSelect = 'none';
           }
@@ -1890,7 +1913,12 @@
         function onUp() {
           document.removeEventListener('mousemove', onMove);
           document.removeEventListener('mouseup', onUp);
-          if (dragging) { document.body.style.cursor = ''; document.body.style.userSelect = ''; notify(); }
+          if (dragging) {
+            suppressIframePointerEvents(false);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            notify();
+          }
         }
         document.addEventListener('mousemove', onMove);
         document.addEventListener('mouseup', onUp);
@@ -2495,11 +2523,22 @@
     }
 
     // Spacing widget inputs
+    // `input` event = live preview while typing (no trackChange churn).
+    // `change` event (blur/Enter) = commit, records the edit in trackChange.
     panel.querySelectorAll('.inspector-sv input').forEach(input => {
+      const unitOf = (prop) =>
+        prop.includes('margin') || prop.includes('padding') ? 'px' : '';
+      input.addEventListener('input', (e) => {
+        const prop = e.target.dataset.prop;
+        const raw = e.target.value.trim();
+        if (raw === '' || raw === '-') return; // mid-typing
+        const to = raw + unitOf(prop);
+        if (selectedElement) selectedElement.style.setProperty(prop, to);
+      });
       input.addEventListener('change', (e) => {
         const prop = e.target.dataset.prop;
         const from = e.target.dataset.from;
-        const to = e.target.value + (prop.includes('margin') || prop.includes('padding') ? 'px' : '');
+        const to = e.target.value + unitOf(prop);
         if (selectedElement) selectedElement.style.setProperty(prop, to);
         trackChange(sel, prop, from, to);
       });
@@ -2669,6 +2708,7 @@
           if (!dragging) {
             if (Math.abs(delta) < 3) return;
             dragging = true;
+            suppressIframePointerEvents(true);
             document.body.style.cursor = 'ew-resize';
             document.body.style.userSelect = 'none';
           }
@@ -2684,6 +2724,7 @@
           document.removeEventListener('mousemove', onMove);
           document.removeEventListener('mouseup', onUp);
           if (dragging) {
+            suppressIframePointerEvents(false);
             document.body.style.cursor = '';
             document.body.style.userSelect = '';
             const prop = inp.dataset.prop;
@@ -2726,44 +2767,66 @@
   }
 
   // ── Spacing widget scrub: drag on .inspector-sv cells ──
+  // The input fills the whole cell with cursor: ew-resize, so the user
+  // naturally tries to drag on the visible number. Attach scrub to BOTH the
+  // cell wrapper and the input itself, with a drag threshold so a plain
+  // click on the input still focuses it for typing.
   function initSpacingScrub(panel, sel) {
     panel.querySelectorAll('.inspector-sv').forEach(sv => {
       const input = sv.querySelector('input[data-prop]');
       if (!input) return;
 
-      let startX = 0, startVal = 0;
+      function startScrub(e) {
+        const startX = e.clientX;
+        const startVal = parseFloat(input.value) || 0;
+        let dragging = false;
+        // When mousedown lands on the cell wrapper (not the input itself)
+        // we know it's a scrub gesture — no threshold needed, prevent the
+        // default to keep focus off the input.
+        const onWrapper = e.target !== input;
+        if (onWrapper) {
+          dragging = true;
+          e.preventDefault();
+          suppressIframePointerEvents(true);
+          document.body.style.cursor = 'ew-resize';
+          document.body.style.userSelect = 'none';
+        }
 
-      sv.addEventListener('mousedown', (e) => {
-        if (e.target.tagName === 'INPUT') return;
-        e.preventDefault();
-        startX = e.clientX;
-        startVal = parseFloat(input.value) || 0;
+        function onMove(ev) {
+          const delta = ev.clientX - startX;
+          if (!dragging) {
+            if (Math.abs(delta) < 3) return;
+            dragging = true;
+            suppressIframePointerEvents(true);
+            document.body.style.cursor = 'ew-resize';
+            document.body.style.userSelect = 'none';
+          }
+          const newVal = Math.round(startVal + delta * (ev.shiftKey ? 10 : 1));
+          input.value = String(newVal);
+          const prop = input.dataset.prop;
+          if (selectedElement && prop) {
+            selectedElement.style.setProperty(prop, newVal + 'px');
+          }
+        }
+
+        function onUp() {
+          document.removeEventListener('mousemove', onMove);
+          document.removeEventListener('mouseup', onUp);
+          if (dragging) {
+            suppressIframePointerEvents(false);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            const prop = input.dataset.prop;
+            const from = input.dataset.from;
+            trackChange(sel, prop, from, input.value + 'px');
+          }
+        }
+
         document.addEventListener('mousemove', onMove);
         document.addEventListener('mouseup', onUp);
-        document.body.style.cursor = 'ew-resize';
-        document.body.style.userSelect = 'none';
-      });
-
-      function onMove(e) {
-        const delta = e.clientX - startX;
-        const multiplier = e.shiftKey ? 10 : 1;
-        const newVal = Math.round(startVal + delta * multiplier);
-        input.value = String(newVal);
-        const prop = input.dataset.prop;
-        if (selectedElement && prop) {
-          selectedElement.style.setProperty(prop, newVal + 'px');
-        }
       }
 
-      function onUp() {
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onUp);
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
-        const prop = input.dataset.prop;
-        const from = input.dataset.from;
-        trackChange(sel, prop, from, input.value + 'px');
-      }
+      sv.addEventListener('mousedown', startScrub);
     });
   }
 
