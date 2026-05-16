@@ -1,6 +1,6 @@
 ![CSS Inspector](cssinspector.svg)\# CSS Inspector, a Claude Code skill
 
-**A visual CSS inspector and editor that <mark data-color="#ffd700aa" style="background-color: rgba(255, 215, 0, 0.667); color: inherit;">pops out dynamically from a skill</mark>**\
+**A visual CSS inspector and editor that <mark data-color="#ffd700aa" style="background-color: rgba(255, 215, 0, 0.667); color: inherit;">pops out on demand</mark>, right from a <mark data-color="#ffd700aa" style="background-color: rgba(255, 215, 0, 0.667); color: inherit;">skill</mark>**\
 Pick any element, tweak its styles like Figma / Webflow, then hand the changes to Claude.
 
 No DevTools, no manual diffs. You don't have to use Cursor's and VScode's toolbar that only works with their chat agent and not Claude's chat.
