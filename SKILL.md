@@ -199,9 +199,10 @@ The goal: build a `design-system.json` describing the project's components so th
    - Check for `vite.config.*` → root is project root
    - Check for `public/index.html` (CRA / Next.js) → root is `public/`
    - Default: project root
-2. Copy `overlay.js` from `~/.claude/skills/css-inspector/` into `<web-root>/.inspector/overlay.js`
-3. Find the HTML entry point (`index.html` in project root, or `public/index.html`)
-4. Inject before `</body>`:
+2. **Always re-copy** `overlay.js` from `~/.claude/skills/css-inspector/` into `<web-root>/.inspector/overlay.js` — overwrite any existing copy. This ensures every "open the inspector" run gets the latest skill code; otherwise users hit stale-snapshot bugs when the skill is updated but their projects still hold the old overlay.
+3. **Always re-copy** any `presets/` files referenced by `.inspector/settings.json` so design-system data is fresh too.
+4. Find the HTML entry point (`index.html` in project root, or `public/index.html`)
+5. Inject before `</body>`:
    ```html
    <!-- css-inspector:start -->
    <script>window.__inspectorSettings = SETTINGS_JSON_HERE;</script>
@@ -209,7 +210,8 @@ The goal: build a `design-system.json` describing the project's components so th
    <!-- css-inspector:end -->
    ```
    Replace `SETTINGS_JSON_HERE` with the inline JSON contents of `.inspector/settings.json` written in step 3.5.
-5. Output: **Inspector injected. Open your dev server (http://localhost:PORT) to start inspecting. The panel will appear in the top-right corner.**
+   If the markers already exist (re-trigger of a project that's been inspected before), leave the injection in place and just refresh the `overlay.js` and `settings.json` content.
+6. Output: **Inspector injected. Open your dev server (http://localhost:PORT) to start inspecting. The panel will appear in the top-right corner.**
 
 ## Step 5 — Wait for user to finish
 

@@ -28,7 +28,20 @@
 
   // ── Browser-only from here ────────────────────────────────────────────────
   if (typeof document === 'undefined') return;
+  // Stronger double-mount guard:
+  //   1. Same-document re-load: window flag + DOM check.
+  //   2. Cross-frame: in static mode the inspector is hosted by the
+  //      parent doc (inspector.html), and if the iframed user page
+  //      ALSO references overlay.js the script would boot a second
+  //      instance with its own panelTip, FAB, etc — visible as
+  //      duplicate tooltips. Detect by checking the parent window's
+  //      flag (wrapped in try/catch for cross-origin safety).
+  if (window.__inspectorBooted) return;
+  try {
+    if (window !== window.top && window.top && window.top.__inspectorBooted) return;
+  } catch (_) { /* cross-origin top — can't check, continue */ }
   if (document.getElementById('__inspector-root')) return;
+  window.__inspectorBooted = true;
 
   // ── Resolve inspection target ──────────────────────────────────────────────
   // Static mode wraps the page in an iframe; live mode injects directly.
@@ -1685,9 +1698,16 @@
   document.body.appendChild(treePopup);
 
   // ── Custom panel tooltip ──────────────────────────────────────────────────
-  const panelTip = document.createElement('div');
-  panelTip.id = '__inspector-panel-tip';
-  document.body.appendChild(panelTip);
+  // Idempotent: if a previous boot left a tooltip element behind (e.g.
+  // script loaded twice in live mode), reuse it instead of stacking
+  // multiple copies in the body — that's what caused the "two tooltips
+  // showing the same text" bug.
+  let panelTip = document.getElementById('__inspector-panel-tip');
+  if (!panelTip) {
+    panelTip = document.createElement('div');
+    panelTip.id = '__inspector-panel-tip';
+    document.body.appendChild(panelTip);
+  }
   let panelTipTimer = null;
 
   function showPanelTip(text, targetEl) {
@@ -1695,10 +1715,20 @@
     panelTip.textContent = text;
     panelTip.classList.add('show');
     const rect = targetEl.getBoundingClientRect();
-    const tipW = Math.min(220, text.length * 7 + 20);
+    // Measure actual tooltip height after content is set rather than
+    // assuming 40px — long tooltips were silently overflowing the
+    // viewport when flipped above the trigger.
+    const tipW = panelTip.offsetWidth  || Math.min(220, text.length * 7 + 20);
+    const tipH = panelTip.offsetHeight || 40;
     let left = rect.left + rect.width / 2 - tipW / 2;
+    // Default: BELOW the trigger. Flip above only if both: (a) doesn't
+    // fit below and (b) does fit above. Otherwise clamp to bottom-8.
     let top = rect.bottom + 6;
-    if (top + 40 > window.innerHeight) top = rect.top - 36;
+    const fitsBelow = top + tipH <= window.innerHeight - 8;
+    const aboveTop  = rect.top - tipH - 6;
+    const fitsAbove = aboveTop >= 8;
+    if (!fitsBelow && fitsAbove) top = aboveTop;
+    else if (!fitsBelow)         top = window.innerHeight - tipH - 8;
     left = Math.max(8, Math.min(window.innerWidth - tipW - 8, left));
     panelTip.style.left = left + 'px';
     panelTip.style.top = top + 'px';
@@ -3212,17 +3242,23 @@
   initDrag();
   initResize();
 
-  // Wire custom tooltips — replace native title behavior
-  root.addEventListener('mouseenter', (e) => {
-    const el = e.target.closest('[data-tip]');
-    if (el) {
-      showPanelTip(el.dataset.tip, el);
-      e.target.title = ''; // suppress native tooltip
-    }
-  }, true);
-  root.addEventListener('mouseleave', (e) => {
-    if (e.target.closest('[data-tip]')) hidePanelTip();
-  }, true);
+  // Wire custom tooltips — replace native title behavior.
+  // Sentinel-guarded so re-running this block (e.g. if some external
+  // hot-reload re-invokes boot) doesn't stack multiple listeners,
+  // which would fire showPanelTip multiple times per hover.
+  if (!root._inspectorTipsBound) {
+    root._inspectorTipsBound = true;
+    root.addEventListener('mouseenter', (e) => {
+      const el = e.target.closest('[data-tip]');
+      if (el) {
+        showPanelTip(el.dataset.tip, el);
+        e.target.title = ''; // suppress native tooltip
+      }
+    }, true);
+    root.addEventListener('mouseleave', (e) => {
+      if (e.target.closest('[data-tip]')) hidePanelTip();
+    }, true);
+  }
 
   // ── Forward declarations (stubs — filled in by Tasks 7-10) ────────────────
   // computeSelector is defined at module scope (above) — boot picks it up via closure.
