@@ -980,13 +980,14 @@
     }
     #__inspector-tooltip {
       position: fixed; background: #1a1a1a; border: 1px solid #333; border-radius: 4px;
-      padding: 4px 8px; font-size: 11px; color: #888; pointer-events: none; z-index: 1000000; display: none;
+      padding: 4px 8px; font-size: 11px; color: #888; pointer-events: none;
+      z-index: 2147483647; display: none;
       font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
     /* Custom panel tooltip */
     #__inspector-panel-tip {
-      position: fixed; z-index: 1000003; pointer-events: none;
+      position: fixed; z-index: 2147483647; pointer-events: none;
       background: #0a0a0a; color: #e0e0e0; font-size: 11px;
       padding: 5px 10px; border-radius: 6px;
       white-space: nowrap; max-width: 220px; white-space: normal; line-height: 1.4;
@@ -1147,9 +1148,39 @@
     .inspector-raw-apply:hover { background: #c96844; }
     .inspector-raw-apply svg { width: 14px; height: 14px; stroke: currentColor; }
 
+    /* Prompt-preview tooltip (hover on Copy Prompt button or change rows).
+       Pointer-events auto so the user can move into the tooltip and
+       scroll long prompts; the show/hide logic bridges trigger→tooltip
+       with a small grace timer. Thin dark scrollbar matches the CSS
+       Raw textarea. */
+    #__inspector-prompt-preview {
+      position: fixed; display: none;
+      background: #0e0e0e; color: #d4d4d4;
+      border: 1px solid #2a2a2a; border-radius: 8px;
+      padding: 12px 14px;
+      font-family: Menlo, Monaco, Consolas, monospace;
+      font-size: 11px; line-height: 1.5;
+      white-space: pre-wrap; word-wrap: break-word;
+      max-width: 520px; max-height: 340px; overflow: auto;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.6);
+      z-index: 2147483647; pointer-events: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #333 transparent;
+    }
+    #__inspector-prompt-preview::-webkit-scrollbar { width: 6px; }
+    #__inspector-prompt-preview::-webkit-scrollbar-thumb {
+      background: #333; border-radius: 3px;
+    }
+    #__inspector-prompt-preview::-webkit-scrollbar-thumb:hover { background: #444; }
+    #__inspector-prompt-preview::-webkit-scrollbar-track { background: transparent; }
+
     /* ── Element tree popup ── */
     #__inspector-tree-popup {
-      display: none; position: fixed; z-index: 1000002;
+      display: none; position: fixed;
+      /* Must sit ABOVE the inspector panel (z 2147483647) — the
+         popup anchors to the panel's selector pill and reads as
+         a child of it. */
+      z-index: 2147483647;
       width: 272px; background: #1e1e1e; border: 1px solid #2e2e2e;
       border-radius: 10px; overflow: hidden;
       max-height: calc(100vh - 24px); overflow-y: auto; scrollbar-width: none;
@@ -1219,7 +1250,7 @@
 
     /* ── Color picker popup ── */
     #__inspector-color-popup {
-      display: none; position: fixed; z-index: 1000001;
+      display: none; position: fixed; z-index: 2147483647;
       width: 220px; background: #1c1c1c; border: 1px solid #2a2a2a;
       border-radius: 8px; overflow: hidden;
       box-shadow: 0 8px 32px rgba(0,0,0,0.5);
@@ -1321,14 +1352,26 @@
       backdrop-filter: blur(4px);
     }
 
-    /* CSS Raw */
+    /* CSS Raw — panel uses flex column so the textarea grows to fill
+       the available space and the Apply toolbar sticks to the bottom. */
+    #__inspector-panel-raw.active {
+      display: flex; flex-direction: column; height: 100%;
+    }
     #__inspector-css-raw {
-      width: 100%; min-height: 160px; background: #1a1a1a;
-      border: none; border-top: 1px solid #252525;
+      flex: 1; width: 100%; min-height: 160px;
+      background: #1a1a1a; border: none; border-top: 1px solid #252525;
       color: #888; font-size: 11px; font-family: 'SF Mono', 'Fira Code', monospace;
-      padding: 12px; resize: vertical; outline: none; line-height: 1.6;
+      padding: 12px; resize: none; outline: none; line-height: 1.6;
+      scrollbar-width: thin;
+      scrollbar-color: #333 transparent;
     }
     #__inspector-css-raw:focus { color: #ccc; }
+    #__inspector-css-raw::-webkit-scrollbar { width: 6px; }
+    #__inspector-css-raw::-webkit-scrollbar-thumb {
+      background: #333; border-radius: 3px;
+    }
+    #__inspector-css-raw::-webkit-scrollbar-thumb:hover { background: #444; }
+    #__inspector-css-raw::-webkit-scrollbar-track { background: transparent; }
 
     /* Override indicator — modified fields */
     .inspector-field.modified .inspector-fi,
@@ -2131,6 +2174,30 @@
     } catch (_) {
       // querySelectorAll can throw on selectors with characters it doesn't
       // understand; skip the index hint when that happens.
+    }
+    const chain = captureAncestorChain(el);
+    if (chain.length) out.ancestorChain = chain;
+    return out;
+  }
+
+  // Walk up to ~5 ancestors of `el` (stopping at body/html) and return
+  // their distinctive class names — used by paste-back as a disambiguation
+  // hint when the selector + text + domIndex don't uniquely identify a
+  // JSX site. Each entry is a space-joined classname string (stripped
+  // of inspector internals); empty/generic ancestors are skipped.
+  function captureAncestorChain(el, maxDepth = 5) {
+    if (!el || !el.parentNode) return [];
+    const out = [];
+    let node = el.parentNode;
+    const stopAt = targetDoc.body || targetDoc.documentElement;
+    while (node && node !== stopAt && out.length < maxDepth) {
+      if (node.nodeType === 1 && node.classList && node.classList.length) {
+        const classes = Array.from(node.classList)
+          .filter(c => !c.startsWith('__inspector-'))
+          .join(' ');
+        if (classes) out.push(classes);
+      }
+      node = node.parentNode;
     }
     return out;
   }
@@ -3359,6 +3426,38 @@
     return measureChildAxis(parent);
   }
 
+  // Per-parent snapshot of children at the FIRST reorder. Stored as a
+  // WeakMap of element references — so the Copy Prompt emit can collapse
+  // any number of subsequent nudges on the same parent into ONE entry
+  // describing { before-state, new permutation }. Element refs survive
+  // repeated re-orderings of the same children inside the same parent.
+  const initialChildrenByParent = new WeakMap();
+  function cleanClassesForWire(cls) {
+    return (cls || '').split(/\s+/)
+      .filter(c => c && !c.startsWith('__inspector-'))
+      .join(' ');
+  }
+  function snapshotInitialChildrenIfNew(parent) {
+    if (!parent || initialChildrenByParent.has(parent)) return;
+    const kids = Array.from(parent.children);
+    // Try to associate the parent with a manifest component — gives
+    // Claude a source-file hint at paste-back time.
+    let source = null;
+    try {
+      const match = matchComponent(parent);
+      if (match && match.source) source = match.source;
+    } catch (_) {}
+    initialChildrenByParent.set(parent, {
+      elements: kids,
+      descriptors: kids.map(c => ({
+        text: (c.textContent || '').trim().slice(0, 80),
+        classes: cleanClassesForWire(c.className),
+      })),
+      ancestorChain: captureAncestorChain(parent),
+      source,
+    });
+  }
+
   // Move `el` one slot earlier (dir=-1) or later (dir=+1) among its
   // element siblings. Pushes a `reorder` history entry. Returns true
   // if the move happened, false if blocked (no parent, edge of list,
@@ -3371,6 +3470,9 @@
     if (cs.position === 'absolute' || cs.position === 'fixed') return false;
 
     const parent = el.parentNode;
+    // Snapshot pre-mutation children once per parent — used at Copy
+    // Prompt time to express the net permutation.
+    snapshotInitialChildrenIfNew(parent);
     const siblings = Array.from(parent.children);
     const fromIdx = siblings.indexOf(el);
     if (fromIdx < 0) return false;
@@ -3378,16 +3480,13 @@
     if (toIdx < 0 || toIdx >= siblings.length) return false;
 
     const parentSelector = computeSelector(parent);
-    const cleanClasses = (cls) => (cls || '').split(/\s+/)
-      .filter(c => c && !c.startsWith('__inspector-'))
-      .join(' ');
     const child = {
       text: (el.textContent || '').trim().slice(0, 80),
-      classes: cleanClasses(el.className),
+      classes: cleanClassesForWire(el.className),
     };
     const siblingsSnapshot = siblings.map(s => ({
       text: (s.textContent || '').trim().slice(0, 80),
-      classes: cleanClasses(s.className),
+      classes: cleanClassesForWire(s.className),
     }));
 
     const targetSib = siblings[toIdx];
@@ -3797,6 +3896,10 @@
       positionFabs();                  // FABs follow the moved element
     };
 
+    // Snapshot pre-mutation children once per parent — used at Copy
+    // Prompt time to express the net permutation.
+    snapshotInitialChildrenIfNew(parent);
+
     // Snapshot original index BEFORE moving (for history).
     const originalSiblings = Array.from(parent.children);
     const fromIdx = originalSiblings.indexOf(source);
@@ -3811,11 +3914,9 @@
     // if the source landed at the same index, undo and skip history push.
     const newIdx = Array.from(parent.children).indexOf(source);
     if (newIdx === fromIdx) { teardown(); return; }
-    const cleanClasses = (cls) => (cls || '').split(/\s+/)
-      .filter(c => c && !c.startsWith('__inspector-')).join(' ');
     const siblingsSnapshot = originalSiblings.map(s => ({
       text: (s.textContent || '').trim().slice(0, 80),
-      classes: cleanClasses(s.className),
+      classes: cleanClassesForWire(s.className),
     }));
     redoStack.length = 0;
     history.push({
@@ -3825,7 +3926,7 @@
       to: newIdx,
       child: {
         text: (source.textContent || '').trim().slice(0, 80),
-        classes: cleanClasses(source.className),
+        classes: cleanClassesForWire(source.className),
       },
       siblingsSnapshot,
       dom: { element: source, parent },
@@ -4141,57 +4242,136 @@
     return `- ${JSON.stringify(i)}`;
   }
 
+  // Collapse all reorders to ONE entry per parent describing the net
+  // permutation. Compact regardless of how many nudges happened —
+  // ships the pre-mutation children list + the new order as indices
+  // into that list. Skips parents whose net effect is identity.
+  function buildCollapsedReorders() {
+    const reorders = reorderEntries();
+    if (!reorders.length) return [];
+    // Use insertion-order traversal so the OUTPUT order matches the
+    // order the user first reordered each parent — feels stable.
+    const parentEls = [];
+    const seen = new Set();
+    reorders.forEach(h => {
+      if (h.dom && h.dom.parent && !seen.has(h.dom.parent)) {
+        seen.add(h.dom.parent);
+        parentEls.push(h.dom.parent);
+      }
+    });
+    const out = [];
+    parentEls.forEach(parentEl => {
+      const initial = initialChildrenByParent.get(parentEl);
+      if (!initial) return;
+      const currentKids = Array.from(parentEl.children);
+      // Permutation: for each live child, find its index in the
+      // pre-mutation list. Element refs make this stable even with
+      // duplicate text/classes (which trip up simple text matching).
+      const order = currentKids.map(c => initial.elements.indexOf(c)).filter(i => i >= 0);
+      // Skip identity (no net change — every undo, no-op move, etc).
+      const isIdentity = order.length === initial.elements.length &&
+                         order.every((v, i) => v === i);
+      if (isIdentity) return;
+      const entry = {
+        action: 'reorder',
+        parent: computeSelector(parentEl),
+        children: initial.descriptors,
+        order,
+        // Carry the parentEl ref out for the drawer / X-click handler.
+        _parentEl: parentEl,
+      };
+      if (initial.source) entry.source = initial.source;
+      if (initial.ancestorChain && initial.ancestorChain.length) {
+        entry.ancestorChain = initial.ancestorChain;
+      }
+      out.push(entry);
+    });
+    return out;
+  }
+
+  // Build a preview of JUST ONE change — used by the per-row hover
+  // tooltip in the drawer. `kind` is 'css' | 'intent' | 'reorder',
+  // `idx` is the position within that kind's collection. Returns the
+  // same {summary line + JSON block} pair the full prompt uses, just
+  // scoped to one entry.
+  function buildSinglePrompt(kind, idx) {
+    if (kind === 'css') {
+      const c = changes[idx];
+      if (!c) return '';
+      const line = `- \`${c.selector}\`: ${c.property} ${c.from} → ${c.to}`;
+      return `Just this CSS edit:\n${line}\n\n<changes>\n${JSON.stringify([c], null, 2)}\n</changes>`;
+    }
+    if (kind === 'intent') {
+      const i = componentIntents[idx];
+      if (!i) return '';
+      return `Just this component change:\n${componentIntentLine(i)}\n\n<components>\n${JSON.stringify([i], null, 2)}\n</components>`;
+    }
+    if (kind === 'reorder') {
+      const collapsed = buildCollapsedReorders();
+      const r = collapsed[idx];
+      if (!r) return '';
+      const newOrderTexts = r.order.map(i => `"${(r.children[i] && r.children[i].text) || '—'}"`);
+      const line = `- Reorder in \`${r.parent}\`: ${newOrderTexts.join(' → ')}`;
+      const { _parentEl, ...wire } = r;
+      return `Just this reorder:\n${line}\n\n<reorders>\n${JSON.stringify([wire], null, 2)}\n</reorders>`;
+    }
+    return '';
+  }
+
   function generateCopyPrompt() {
     const hasChanges = changes.length > 0;
     const hasIntents = componentIntents.length > 0;
-    const reorders = reorderEntries();
-    const hasReorders = reorders.length > 0;
+    const collapsedReorders = buildCollapsedReorders();
+    const hasReorders = collapsedReorders.length > 0;
     if (!hasChanges && !hasIntents && !hasReorders) return 'No changes to apply.';
 
+    // Page context inlined into the lead sentence (reads more naturally
+    // than a separate "Inspector context:" label).
+    let contextSuffix = '';
+    try {
+      const title = (targetDoc.title || '').trim();
+      const path  = (targetWin.location && targetWin.location.pathname) || '';
+      const bits  = [title, path].filter(Boolean);
+      if (bits.length) contextSuffix = ` I'm working on **${bits.join(' · ')}**.`;
+    } catch (_) {}
+
+    // Opening line — states the ask directly. Tool-agnostic; works
+    // pasted into Claude or any other assistant.
+    const lead = `Please apply the edits I just made in the CSS Inspector to the source code.${contextSuffix}`;
+
+    // Section-by-section human summary. Counts let Claude double-check
+    // they processed everything in the JSON blocks below.
     const parts = [];
     if (hasChanges) {
       const lines = changes.map(c =>
         `- \`${c.selector}\`: ${c.property} ${c.from} → ${c.to}`
       );
-      parts.push('Apply these CSS changes:\n' + lines.join('\n'));
+      parts.push(`**CSS changes** (${changes.length}):\n` + lines.join('\n'));
     }
     if (hasIntents) {
       const lines = componentIntents.map(componentIntentLine);
-      parts.push('And these design-system component changes:\n' + lines.join('\n'));
+      parts.push(`**Component changes** (${componentIntents.length}):\n` + lines.join('\n'));
     }
     if (hasReorders) {
-      // Collapse same-parent reorders to their net effect for the
-      // user-facing summary. The <reorders> block still ships the
-      // full sequence so Claude can verify intent.
-      const byParent = new Map();
-      reorders.forEach(h => {
-        const prev = byParent.get(h.parent);
-        if (prev) prev.to = h.to;
-        else byParent.set(h.parent, { parent: h.parent, from: h.from, to: h.to, child: h.child });
+      const lines = collapsedReorders.map(r => {
+        const newOrderTexts = r.order.map(i => `"${(r.children[i] && r.children[i].text) || '—'}"`);
+        return `- Reorder in \`${r.parent}\`: ${newOrderTexts.join(' → ')}`;
       });
-      const lines = Array.from(byParent.values()).map(r =>
-        `- Reorder in \`${r.parent}\`: "${(r.child && r.child.text) || '—'}" from index ${r.from} → ${r.to}`
-      );
-      parts.push('And these sibling reorders:\n' + lines.join('\n'));
+      parts.push(`**Sibling reorders** (${collapsedReorders.length}):\n` + lines.join('\n'));
     }
     const summary = parts.join('\n\n');
 
-    const blocks = [];
-    if (hasChanges) blocks.push(`<changes>\n${JSON.stringify(changes)}\n</changes>`);
-    if (hasIntents) blocks.push(`<components>\n${JSON.stringify(componentIntents)}\n</components>`);
-    if (hasReorders) {
-      const wire = reorders.map(h => ({
-        action: 'reorder',
-        parent: h.parent,
-        from: h.from,
-        to: h.to,
-        child: h.child,
-        siblingsSnapshot: h.siblingsSnapshot,
-      }));
-      blocks.push(`<reorders>\n${JSON.stringify(wire)}\n</reorders>`);
-    }
+    // Strip internal `_parentEl` (DOM ref) from the wire payload.
+    const wireReorders = collapsedReorders.map(({ _parentEl, ...rest }) => rest);
 
-    return `${summary}\n\n${blocks.join('\n\n')}`;
+    const blocks = [];
+    if (hasChanges)   blocks.push(`<changes>\n${JSON.stringify(changes, null, 2)}\n</changes>`);
+    if (hasIntents)   blocks.push(`<components>\n${JSON.stringify(componentIntents, null, 2)}\n</components>`);
+    if (hasReorders)  blocks.push(`<reorders>\n${JSON.stringify(wireReorders, null, 2)}\n</reorders>`);
+
+    const trailer = `The structured blocks below carry the same data — use them to locate the right files and verify counts. Confirm with me before writing if anything's ambiguous.`;
+
+    return `${lead}\n\n${summary}\n\n${trailer}\n\n${blocks.join('\n\n')}`;
   }
   function renderDisabledPreview(panel) {
     const placeholder = (label, val, unit) => `
@@ -5755,7 +5935,11 @@
     const countEl = root.querySelector('#__inspector-bar-count');
     if (!bar) return;
 
-    const totalCount = changes.length + componentIntents.length + reorderEntries().length;
+    // Reorders collapse to ONE logical change per parent (matches the
+    // drawer + Copy Prompt). Internal history depth (e.g. 3 nudges on
+    // the same list) is bookkeeping, not user-facing.
+    const collapsedReorderCount = buildCollapsedReorders().length;
+    const totalCount = changes.length + componentIntents.length + collapsedReorderCount;
     const hasActivity = totalCount > 0 || redoStack.length > 0;
     if (!hasActivity) {
       bar.classList.remove('visible');
@@ -5778,7 +5962,7 @@
     const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
     const rows = changes.map((c, i) => `
-      <div class="changes-row">
+      <div class="changes-row" data-row-kind="css" data-row-index="${i}">
         <div class="changes-row-top">
           <span class="changes-row-selector">${esc(c.selector)}</span>
           <button class="changes-row-rm" data-index="${i}">×</button>
@@ -5801,7 +5985,7 @@
         : `Convert → ${esc(i.to)}`;
       const sels = Array.isArray(i.selectors) ? i.selectors.join(', ') : (i.selector || '');
       return `
-        <div class="changes-row changes-row-intent">
+        <div class="changes-row changes-row-intent" data-row-kind="intent" data-row-index="${idx}">
           <div class="changes-row-top">
             <span class="changes-row-selector">${esc(sels)}</span>
             <button class="changes-row-rm" data-intent-index="${idx}">×</button>
@@ -5813,27 +5997,24 @@
         </div>`;
     }).join('');
 
-    // Reorders live on `history` (not a separate array) — keep them
-    // grouped by parent so multiple nudges on the same list collapse
-    // visually into one row showing the net move.
-    const reordersByParent = new Map();
-    reorderEntries().forEach((h, hi) => {
-      const list = reordersByParent.get(h.parent) || [];
-      list.push({ h, hi });
-      reordersByParent.set(h.parent, list);
-    });
-    const reorderRows = Array.from(reordersByParent.entries()).map(([parent, entries]) => {
-      const first = entries[0].h;
-      const last = entries[entries.length - 1].h;
-      const netLabel = entries.length === 1
-        ? `${esc((first.child && first.child.text) || '—')} · ${first.from} → ${first.to}`
-        : `${esc((last.child && last.child.text) || '—')} · ${first.from} → ${last.to} (${entries.length} moves)`;
-      const lastHi = entries[entries.length - 1].hi;
+    // Same-parent reorders ARE one logical change (regardless of how
+    // many nudges produced the net effect). Drawer shows one row per
+    // parent. We index by parent index in collapsedReorders[] so the X
+    // can unwind every history entry tied to that parent.
+    const collapsedReorders = buildCollapsedReorders();
+    const reorderRows = collapsedReorders.map((r, idx) => {
+      const newOrderTexts = r.order.map(i => (r.children[i] && r.children[i].text) || '—');
+      // Showing 4+ texts gets long; truncate visually but the full
+      // order is always in the JSON block.
+      const previewTexts = newOrderTexts.length > 4
+        ? newOrderTexts.slice(0, 4).concat(`…+${newOrderTexts.length - 4}`)
+        : newOrderTexts;
+      const netLabel = previewTexts.map(t => esc(String(t))).join(' → ');
       return `
-        <div class="changes-row changes-row-intent">
+        <div class="changes-row changes-row-intent" data-row-kind="reorder" data-row-index="${idx}">
           <div class="changes-row-top">
-            <span class="changes-row-selector">${esc(parent || '—')}</span>
-            <button class="changes-row-rm" data-reorder-hi="${lastHi}">×</button>
+            <span class="changes-row-selector">${esc(r.parent || '—')}</span>
+            <button class="changes-row-rm" data-reorder-parent="${idx}">×</button>
           </div>
           <div class="changes-row-bottom">
             <span class="changes-row-prop">reorder</span>
@@ -5842,7 +6023,7 @@
         </div>`;
     }).join('');
 
-    const totalCount = changes.length + componentIntents.length + reorderEntries().length;
+    const totalCount = changes.length + componentIntents.length + collapsedReorders.length;
     drawer.innerHTML = `
       <div class="changes-drawer-hd">
         <div class="changes-drawer-hd-left">
@@ -5874,20 +6055,29 @@
         renderChangesDrawer();
       });
     });
-    // X on a reorder row reverts the most-recent reorder for that
-    // parent (which is what `data-reorder-hi` points at). Each click
-    // pops one nudge; chained reorders unwind one at a time.
-    drawer.querySelectorAll('.changes-row-rm[data-reorder-hi]').forEach(btn => {
+    // X on a reorder row removes the WHOLE logical change for that
+    // parent — unwind every history entry that touched it, restoring
+    // the parent's children to their pre-reorder state. Matches the
+    // user's mental model of "one row = one change".
+    drawer.querySelectorAll('.changes-row-rm[data-reorder-parent]').forEach(btn => {
       btn.addEventListener('click', () => {
-        const hi = parseInt(btn.dataset.reorderHi);
-        const h = history[hi];
-        if (h && h.kind === 'reorder') {
-          history.splice(hi, 1);
-          revertReorder(h);
-          redoStack.length = 0;
+        const idx = parseInt(btn.dataset.reorderParent);
+        const r = collapsedReorders[idx];
+        if (!r || !r._parentEl) return;
+        // Walk history in REVERSE so each revertReorder lands on the
+        // current DOM state correctly (LIFO undo semantics).
+        for (let i = history.length - 1; i >= 0; i--) {
+          const h = history[i];
+          if (h.kind === 'reorder' && h.dom && h.dom.parent === r._parentEl) {
+            revertReorder(h);
+            history.splice(i, 1);
+          }
         }
+        redoStack.length = 0;
         syncBadge();
         renderChangesDrawer();
+        repositionSelectionOverlays();
+        positionFabs();
       });
     });
 
@@ -5904,44 +6094,84 @@
       });
     });
 
-    // Hover-preview: show the full Copy Prompt text in a tooltip when
-    // the user hovers the Copy button or any of the change rows.
-    // Gives a "what's about to be sent to Claude" preview without
-    // making the user actually paste it.
+    // Hover preview routing:
+    //   · Copy Prompt button → full prompt for ALL pending changes.
+    //   · Individual change row → JUST that row's slice (one summary
+    //     line + the relevant single-entry JSON block).
+    // Keeps the per-row hover focused on what you're about to remove
+    // / inspect, while the button still shows the full payload.
     const copyBtn = drawer.querySelector('#__inspector-bar-copy');
-    const hoverTargets = [copyBtn, ...drawer.querySelectorAll('.changes-row')];
-    hoverTargets.forEach(el => {
-      el.addEventListener('mouseenter', () => showPromptPreview(el));
-      el.addEventListener('mouseleave', hidePromptPreview);
+    if (copyBtn) {
+      copyBtn.addEventListener('mouseenter', () => showPromptPreview(copyBtn));
+      copyBtn.addEventListener('mouseleave', hidePromptPreview);
+    }
+    drawer.querySelectorAll('.changes-row[data-row-kind]').forEach(row => {
+      row.addEventListener('mouseenter', () => {
+        const text = buildSinglePrompt(row.dataset.rowKind, parseInt(row.dataset.rowIndex));
+        if (text) showPromptPreview(row, text);
+      });
+      row.addEventListener('mouseleave', hidePromptPreview);
     });
   }
 
   // Tooltip element rendered into parent doc (above everything else).
-  // Lazy-created on first show.
+  // Lazy-created on first show. Styles live in the stylesheet (above)
+  // — only positioning is inline here.
   let promptPreviewEl = null;
+  let promptPreviewHideTimer = null;
   function ensurePromptPreview() {
     if (promptPreviewEl) return promptPreviewEl;
     promptPreviewEl = document.createElement('div');
     promptPreviewEl.id = '__inspector-prompt-preview';
-    promptPreviewEl.style.cssText = [
-      'position:fixed', 'display:none',
-      'background:#0e0e0e', 'color:#d4d4d4',
-      'border:1px solid #2a2a2a', 'border-radius:8px',
-      'padding:12px 14px',
-      'font-family:Menlo,Monaco,Consolas,monospace', 'font-size:11px',
-      'line-height:1.5', 'white-space:pre-wrap', 'word-wrap:break-word',
-      'max-width:520px', 'max-height:340px', 'overflow:auto',
-      'box-shadow:0 8px 28px rgba(0,0,0,0.6)',
-      'z-index:2147483647', 'pointer-events:none',
-    ].join(';');
     document.body.appendChild(promptPreviewEl);
+    // Cancel pending hide while the cursor is over the tooltip itself,
+    // and hide on leave. Lets the user scroll a long prompt.
+    promptPreviewEl.addEventListener('mouseenter', () => {
+      if (promptPreviewHideTimer) { clearTimeout(promptPreviewHideTimer); promptPreviewHideTimer = null; }
+    });
+    promptPreviewEl.addEventListener('mouseleave', () => hidePromptPreview());
     return promptPreviewEl;
   }
-  function showPromptPreview(anchor) {
-    const text = generateCopyPrompt();
+  // Light syntax highlighting for the preview tooltip ONLY. The text
+  // that hits the clipboard stays plain. Keep this subtle: structural
+  // anchors (block tags + selectors) coral / blue; JSON keys soft blue;
+  // numbers + booleans soft amber; null muted. No bracket coloring,
+  // no per-line backgrounds — it's a preview, not an editor.
+  function colorizePromptPreview(plain) {
+    const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    let out = esc(plain);
+    // 1. Block tags <changes>, <components>, <reorders> — coral.
+    out = out.replace(/&lt;(\/?(?:changes|components|reorders))&gt;/g,
+      '<span style="color:#DA7756">&lt;$1&gt;</span>');
+    // 2. Selectors inside backticks (`.cell-pills`, `.btn`) — soft blue.
+    out = out.replace(/`([^`\n]+)`/g, '<span style="color:#6ba5f8">`$1`</span>');
+    // 3. JSON keys: "word": → soft blue. Match only when followed by colon.
+    out = out.replace(/("[\w-]+")(\s*:)/g, '<span style="color:#6ba5f8">$1</span>$2');
+    // 4. JSON numbers / booleans — soft amber.
+    //    Two cases: inline (`"key": 42`) and array elements on their own
+    //    line in pretty-printed JSON (`  42,`). The second regex is /gm
+    //    so each line is matched independently.
+    out = out.replace(/(:\s*)(-?\d+(?:\.\d+)?)\b/g, '$1<span style="color:#cda165">$2</span>');
+    out = out.replace(/^(\s+)(-?\d+(?:\.\d+)?)(,?)$/gm,
+      '$1<span style="color:#cda165">$2</span>$3');
+    out = out.replace(/(:\s*)(true|false)\b/g, '$1<span style="color:#cda165">$2</span>');
+    // 5. null — muted italic.
+    out = out.replace(/(:\s*)null\b/g, '$1<span style="color:#777;font-style:italic">null</span>');
+    // 6. Markdown bold **text** in the summary — slightly brighter.
+    out = out.replace(/\*\*([^*\n]+)\*\*/g, '<span style="color:#fff;font-weight:600">$1</span>');
+    return out;
+  }
+
+  function showPromptPreview(anchor, overrideText) {
+    const text = overrideText !== undefined ? overrideText : generateCopyPrompt();
     if (!text || text === 'No changes to apply.') return;
     const tip = ensurePromptPreview();
-    tip.textContent = text;
+    // Cancel any pending hide so a quick mouse jiggle doesn't drop us.
+    if (promptPreviewHideTimer) { clearTimeout(promptPreviewHideTimer); promptPreviewHideTimer = null; }
+    tip.innerHTML = colorizePromptPreview(text);
+    // Reset scroll to top — when switching between rows the tooltip
+    // should always start at the beginning of its new content.
+    tip.scrollTop = 0;
     // Make it visible (offsetHeight needs the element to be rendered)
     tip.style.display = 'block';
 
@@ -5960,7 +6190,15 @@
     tip.style.top  = top  + 'px';
   }
   function hidePromptPreview() {
-    if (promptPreviewEl) promptPreviewEl.style.display = 'none';
+    // Small grace period so the cursor can bridge from the trigger
+    // (e.g., Copy Prompt button) to the tooltip without it flashing
+    // closed. Cancelled by mouseenter on either the trigger or the
+    // tooltip itself.
+    if (promptPreviewHideTimer) clearTimeout(promptPreviewHideTimer);
+    promptPreviewHideTimer = setTimeout(() => {
+      if (promptPreviewEl) promptPreviewEl.style.display = 'none';
+      promptPreviewHideTimer = null;
+    }, 140);
   }
   function togglePickMode() {
     pickMode ? exitPickMode() : enterPickMode();
@@ -6024,10 +6262,51 @@
 
   function copySelectionIntro(triggerBtn) {
     if (!selectedElement) return;
-    const kind = elementKind(selectedElement);
     const sel = computeSelector(selectedElement);
     const tag = selectedElement.tagName.toLowerCase();
-    const intro = `Let's talk about this ${kind} \`${sel}\` (${tag}): `;
+
+    // Page hint: title + URL pathname so the assistant knows which
+    // entry point in the codebase to look at.
+    let pageBit = '';
+    try {
+      const title = (targetDoc.title || '').trim();
+      const path  = (targetWin.location && targetWin.location.pathname) || '';
+      const bits  = [title, path].filter(Boolean);
+      if (bits.length) pageBit = ` on ${bits.join(' · ')}`;
+    } catch (_) {}
+
+    // Ancestor chain (top → leaf direction). Take the first class of
+    // each ancestor; .inspector- prefixed classes already filtered by
+    // captureAncestorChain.
+    let ancestorBit = '';
+    const chain = captureAncestorChain(selectedElement);
+    if (chain.length) {
+      const tops = chain.slice().reverse()
+        .map(c => '.' + (c.split(/\s+/)[0] || ''))
+        .filter(c => c !== '.')
+        .join(' > ');
+      if (tops) ancestorBit = ` Ancestors: ${tops}.`;
+    }
+
+    // Children list — only for actual containers (≥2 children).
+    // Truncate at 6 names so this doesn't blow up for long lists.
+    let childrenBit = '';
+    const kids = Array.from(selectedElement.children || []);
+    if (kids.length >= 2) {
+      const kidName = c => {
+        const firstClass = (c.className || '').split(/\s+/)
+          .find(x => x && !x.startsWith('__inspector-'));
+        return firstClass ? '.' + firstClass : `<${c.tagName.toLowerCase()}>`;
+      };
+      const names = kids.map(kidName);
+      const preview = names.length > 6
+        ? names.slice(0, 5).concat(`…+${names.length - 5}`).join(', ')
+        : names.join(', ');
+      childrenBit = ` Children: ${kids.length} (${preview}).`;
+    }
+
+    const intro = `Looking at \`${sel}\` (a <${tag}>)${pageBit}.${ancestorBit}${childrenBit}`;
+
     if (!navigator.clipboard || !navigator.clipboard.writeText) return;
     navigator.clipboard.writeText(intro).then(() => {
       const btn = triggerBtn || root.querySelector('.tree-copy-btn');

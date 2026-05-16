@@ -1,6 +1,12 @@
-# CSS Inspector- Claude Code Skill
+![CSS Inspector](cssinspector.svg)\# CSS Inspector, a Claude Code skill
 
-A visual CSS inspector that lives inside your browser, built for Claude Code. Pick any element on your page, tweak its styles in real time, then let Claude apply the changes back to your source files — no DevTools, no manual diffs.
+**A visual CSS inspector and editor that <mark data-color="#ffd700aa" style="background-color: rgba(255, 215, 0, 0.667); color: inherit;">pops out dynamically from a skill</mark>**\
+Pick any element, tweak its styles like Figma / Webflow, then hand the changes to Claude.
+
+No DevTools, no manual diffs. You don't have to use Cursor's and VScode's toolbar that only works with their chat agent and not Claude's chat.
+
+Built by Aviran Revach · [GitHub](https://github.com/aviranrevach)\
+*Dedicated 🖤 to my team at [Atera](https://atera.com) and the product-design students.*
 
 ---
 
@@ -8,141 +14,126 @@ A visual CSS inspector that lives inside your browser, built for Claude Code. Pi
 
 Two things in one panel: **inspect any element visually**, then **hand the changes off to Claude cleanly**.
 
-You're vibe coding in Claude inside VS Code. The chat is fast, the diffs are clean — but the moment you need to nudge a padding by 4 px or tweak a hex value, you're back to typing "make the hero title a bit bigger and the spacing tighter" and re-reading Claude's edit. That's the gap this skill closes.
+You're vibe coding in Claude Code inside VS Code. The chat is fast, the diffs are clean — but the moment you need to nudge a padding by 4 px, swap a button variant, or reorder a row of pills, you're back to typing prose like "make the hero title a bit bigger and the spacing tighter" and re-reading whatever Claude inferred. That's the gap this skill closes.
 
-It's a visual editor that lives in your page, with **Webflow- and Figma-shaped controls** and an AI hand-off built in. Pick any element, drag its values around with real sliders, scrubs, and color pickers, and when you're happy, paste one prompt back into Claude. Claude reads the structured change set, finds each rule in your source files, applies the edit at the right line, and shows you a diff before writing.
+It's a visual editor that lives in your page, with **Webflow- and Figma-shaped controls** and a Claude hand-off built in. Pick any element, drag values around with real sliders and scrubs, swap component variants from dropdowns, drag children to reorder them — and when you're happy, paste one prompt back into Claude. The prompt carries structured JSON payloads so Claude can find each rule / component / list in your source files, edit precisely, and show you a diff before writing.
 
-### Inspect & tweak visually
+---
 
-Draggable, resizable, minimizable panel docked top-right. Click **Select**, pick any element, and edit:
+## Capabilities
+
+Draggable, resizable, minimizable panel docked top-right. At a glance:
+
+| Capability | What it does |
+| --- | --- |
+| **Design tab** | Visual editing of every common CSS property — Position, Layout, Appearance, Typography (full breakdown below). Live preview, scrub-on-drag, gradient + eyedropper. |
+| **CSS Raw tab** | Paste / type raw CSS declarations; click *Apply to tracker* to record them all as tracked changes. |
+| **Component variants** | When the manifest recognises a picked element, a `Component identified` section appears with **variant dropdowns** (e.g. `Button → variant: primary / destructive / ghost`). |
+| **Convert-to** | Multi-element refactor on the design-system side (e.g. select 3 Buttons → `Convert to SegmentedControl`). |
+| **Sibling reorder** | **Arrow keys** nudge a picked element among its siblings; **drag** the small pink circle handles for direct positioning. Cursor-exit promotion auto-targets the ancestor whose layout axis matches the cursor's exit direction. |
+| **Multi-select picking** | Pick multiple elements at once (opt-in in Settings); variant changes and conversions apply to the whole batch. |
+| **Changes drawer + undo / redo** | Bottom bar accumulates every edit. Undo / redo step through the whole history (CSS edits, variant swaps, reorders, conversions). Same-parent reorders collapse to one logical change. |
+| **Copy Prompt for Claude** | One coral button copies a structured prompt (summary + `<changes>` / `<components>` / `<reorders>` JSON blocks) Claude can apply precisely. Hover any row to preview its slice. |
+| **Chat-ready intro** | Smaller hand-off: copy a context line (selector + page + ancestors + children summary) for ad-hoc Claude questions that don't need the structured payload. |
+| **Settings** | Toggle Edit-by-class, Show selection box, Design-system preset, Multi-select picker, "Ask Claude" fallback. |
+
+### Design tab — visual editing breakdown
 
 | Section | Controls |
 | --- | --- |
-| Position | X / Y / Z, rotation, flip |
-| Layout | flow (block / flex / grid / inline), width × height, padding & margin diagram, clip-content, border-box |
-| Appearance | opacity, border-radius, fill, stroke, shadow, layers |
-| Typography | font family, size, weight, line height, letter spacing, color |
+| **Position** | X / Y / Z, Rotation, Flip |
+| **Layout** | Flow (block / flex / grid / inline), W × H, Figma-style alignment pad, Gap, Padding x/y, Margins-box diagram, Clip content, Border-box |
+| **Appearance** | Opacity, Border-radius, Fill (solid + gradient + eyedropper), Stroke, Shadow, Layered effects |
+| **Typography** | Font family, Size, Weight, Line-height, Letter-spacing, Color |
 
-Every value previews live. Numeric inputs scrub on horizontal drag. The color picker handles solid + linear-gradient with an eyedropper. Right-click a picked element to walk parents and siblings in the element-tree popup. Prefer raw CSS? The **CSS Raw** tab is right there.
+Every value previews live. Numeric inputs **scrub on horizontal drag**. The color picker handles solid + linear-gradient with stops, an eyedropper, and hex/HSL/RGB inputs.
 
-### Hand off to AI cleanly
+### Design-system aware
 
-A bottom Changes bar tracks every edit with undo / redo. Click **Copy Prompt** and paste back into Claude — the prompt carries a structured `<changes>` JSON block (`selector`, `property`, `from`, `to`, `file`, `line`) so Claude knows exactly which file and which line to touch. No more "make the title bigger" round-trips; no more Claude rewriting a whole rule when you only wanted to change one value.
+If your project uses **shadcn**, the inspector recognises components by their classnames and shows a `Component identified` section with **variant dropdowns** (e.g. `Button → variant: primary | destructive | ghost`) and a `Convert to…` block (e.g. `2 Buttons → ToggleGroup`).
 
-### Talk to Claude about what you're pointing at
+If your project has its own custom design system, the inspector scans your `.tsx` / `.jsx` / `.vue` files on first open, builds an inferred manifest, and writes it to `.inspector/design-system.json`. You can curate from there.
 
-The inspector doubles as a **visual selection layer for chat**. Pick anything on the page, then click the small **📋 copy icon** next to the selector pill in the header. A chat-ready intro line lands on your clipboard:
+Built-in preset cards for **Claude Design, shadcn, MUI, Chakra, Mantine, Tailwind, NextUI, antd** sit in the Settings panel.
 
-- Pick a leaf (h1, p, span, a, …) → `Let's talk about this element \`.hero-title\` (h1):`
-- Pick a container (div, section, main, …) → `Let's talk about this area \`.hero\` (section):`
+### Sibling reorder
 
-Paste into Claude in VS Code, then type the actual ask. Claude now has the selector unambiguously, with the right framing baked in:
+Pick a child and press **arrow keys** to nudge it among its siblings (vertical context = ↑/↓, horizontal flex-row = ←/→). Or grab the small **pink circle handle** that appears on each sibling and drag-drop to a new position. Promotion: hover outside the selected element and the inspector auto-promotes to the nearest ancestor whose layout matches the cursor's exit direction — so you can also reorder the selected element itself among its siblings, or its container among ITS siblings, all without re-picking.
 
-> "Let's talk about this element `.hero-title` (h1): tighten the line-height and bump the weight to 800."
-> "Let's talk about this area `.hero` (section): rewrite it as a 3-column grid, stack on mobile."
-> "Let's talk about this area `.card` (div): add a sign-up CTA at the bottom."
+### Changes drawer + Claude hand-off
 
-Same picker, two parallel phrasings — *element* nudges a node, *area* restructures a region — and Claude infers which scope you mean from the prefix it just received. It's the same point-and-discuss feel as Claude's design canvas, with one extra step (paste once) to bridge the inspector and the chat. The Copy button pulses briefly on your first pick so you don't miss it; the element-tree popup also surfaces the tip when you right-click a picked element.
+A bottom Changes bar tracks every edit with undo / redo. Click **Copy Prompt for Claude** to copy a single, structured prompt to your clipboard. Hover any row in the drawer to preview the slice that row will contribute.
 
-### Who it's for
+Same-parent reorders **collapse to one logical change** (3 nudges on the same list = 1 row = 1 entry on the wire — Claude gets the net new order as a permutation, not three intermediate moves).
 
-Built for **vibe coders who left Cursor for Claude inside VS Code** and miss the visual muscle memory their old tools (Webflow, Figma, Chrome DevTools) trained into their hands. Use it to keep your craft sharp while Claude does the typing.
+### Chat-ready intro for ad-hoc questions
 
-> **Coming soon:** design-system awareness. The inspector will detect your tokens (CSS variables, Tailwind theme, design-system primitives) and let you pick from named values instead of raw px / hex — so changes stay on-system.
+Click the selector pill in the header → click **Copy chat-ready intro**. Lands a context line on your clipboard like:
+
+> `Looking at .row.header (a <div>) on Insights → Product Items · Concepts · /insights-prototype.html. Ancestors: .stage > .frame > .splitG > .list-wrap > .listG. Children: 6 (.row-mark, .title-cell, .cell-stack, .cell-stack, .status-cell, .arr-cell).`
+
+Paste into Claude, then type your actual question. Claude has enough hooks to find the right file and the right element before you've even finished asking.
 
 ---
 
-## How it attaches
+## Quick start — operating from the chat
 
-| Project type | How it attaches |
+The skill is designed to be triggered conversationally. Once installed, in any VS Code project:
+
+### 1. Open the inspector
+
+Say any of these to Claude:
+
+> "open the CSS inspector" · "inspect my page" · "let me tweak styles visually" · "I want to redesign this UI"
+
+Claude detects your project type:
+
+| Project | What happens |
 | --- | --- |
-| Static HTML + CSS | Serves your files locally on port 8787, wraps `index.html` in an iframe inside `inspector.html` |
-| Vite / React / Vue / Next.js | Temporarily injects a `<script>` tag into your `index.html` (or `public/index.html`) — removed automatically when done |
+| Static HTML + CSS | Starts a local server (Python 3) on `:8787`, wraps `index.html` in an iframe inside `inspector.html`, opens it in your browser. |
+| Vite / React / Vue / Next | Temporarily injects a `<script>` tag into `index.html` (or `public/index.html`) — removed when you're done. |
 
-Claude detects which mode to use. If it's ambiguous, it asks.
+If your project's design system isn't a known preset, Claude offers to **scan your components and generate a manifest** so the Component section lights up.
 
----
+### 2. Pick + edit
 
-## How to trigger
+Click **Select** in the header (or use the on-page picker), then click any element on the page. The blue **selection box** appears around it; FAB action buttons appear near the selection (`Reselect`, `Clear`, `Select parent`, `Select first sibling`).
 
-Say any of these in Claude Code:
+- **Design tab** → visual sliders / scrubs / color pickers / variant dropdowns
+- **CSS Raw tab** → paste declarations and click *Apply to tracker*
+- **Arrow keys** → reorder among siblings
+- **Right-click** an element → element-tree popup showing the parent chain + sibling list
 
-> "inspect my page" "let me tweak the styles" "visual CSS editor" "open the CSS inspector" "I want to edit styles visually"
+Every edit shows live and is captured in the Changes drawer.
 
----
+### 3. Send it back to Claude
 
-## Picking elements
+Click the coral **Copy Prompt for Claude** button. Paste back into the same Claude chat. The prompt opens with:
 
-Click the **Select** button in the header → click any element on the page. The blue outline shows what you're about to select. The selector pill at the top shows what's currently selected (e.g. `.hero-title`, `#main-heading`).
+> Please apply the edits I just made in the CSS Inspector to the source code. I'm working on **Insights → Product Items · Concepts · /insights-prototype.html**. \*\***CSS changes** (2):
+>
+> - `.hero-title`: font-size 48px → 64px
+> - `.nav`: padding 0px → 16px
 
-**Right-click** a picked element to open the **element-tree popup** — a small overlay showing the parent chain and siblings. Click any entry to jump the selection up or sideways through the DOM without leaving picker mode.
+\*&gt; *...followed by structured* `<changes>` */* `<components>` */* `<reorders>` *JSON blocks.*
 
----
+Claude reads the structured blocks, finds the right files, and shows a **unified diff** for your confirmation before writing.
 
-## Editing styles
+### 4. Iterate
 
-Open the **Design** tab. Sections collapse with a chevron; they remember their state between sessions. Every edit previews live — no reload needed.
+The inspector stays open. Pick another element, make more edits, copy again. The Changes drawer accumulates — undo / redo per change, individual row removal, or full-batch copy at any time.
 
-Highlights:
+### 5. Discuss without applying
 
-- **Padding / margin diagram** — a visual box-model diagram with separate input fields for each of the eight edges; lock-toggle for symmetric values.
-- **Color picker** — solid + linear-gradient with stops, an eyedropper, hex / HSL inputs, and an opacity slider. Click any swatch to open it inline.
-- **Scrub-spacing** — drag horizontally on any numeric input (padding, margin, font-size, etc.) to nudge the value live.
-- **Layers** — for shadows and gradients, layer rows with eye / remove / reorder controls.
+For an ad-hoc question ("what would make this row easier to scan?"), use the **Copy chat-ready intro** button in the element-tree popup. Pastes a context line you append your question to. Claude knows what you're pointing at without any structured payload.
 
----
+### 6. Done
 
-## Reviewing your changes
-
-The bottom **Changes** bar is always visible:
-
-```
-[ ↶ ] [ ↷ ]   (5) Changes to execute ▾                [Copy Prompt]
-```
-
-- Undo / Redo step backwards and forwards through every edit you've made.
-- Click the pill to expand the drawer:
-
-```
-.hero-title · font-size    →  64px   ↩
-.hero-title · color        →  #3B82F6 ↩
-.nav        · padding      →  16px    ↩
-```
-
-- Each row has an individual undo. **Copy Prompt** copies the whole batch to your clipboard.
-
----
-
-## What gets copied
-
-```
-Apply these CSS changes:
-- `.hero-title`: font-size 48px → 64px
-- `.hero-title`: color #ffffff → #3B82F6
-- `.nav`: padding 0px → 16px
-
-<changes>
-[{"selector":".hero-title","property":"font-size","from":"48px","to":"64px","file":"styles.css","line":12}, ...]
-</changes>
-```
-
-Claude parses the `<changes>` JSON block and updates the source files precisely (surgical in-place edit by selector + line number).
-
----
-
-## How changes get applied
-
-- **CSS / SCSS files** — in-place edit using selector + line from the changes block.
-- **Component files** (CSS-in-JS, CSS Modules, Vue scoped, Svelte) — Claude locates the style declaration and updates it.
-- **External stylesheets** (Tailwind CDN, etc.) — Claude adds an override rule to your project's own CSS.
-
-A unified diff is shown before any file is written.
+Tell Claude *"close the inspector"* (or just stop using it). In live mode, Claude removes the injected `<script>` tag automatically.
 
 ---
 
 ## Install
-
-Clone the repo and run the install script:
 
 ```bash
 git clone https://github.com/aviranrevach/css-inspector-skill ~/code/css-inspector
@@ -150,11 +141,21 @@ cd ~/code/css-inspector
 ./bin/install
 ```
 
-`bin/install` creates a symlink at `~/.claude/skills/css-inspector` pointing at the cloned repo, so the skill loaded by Claude Code is always the repo's current HEAD. To remove: `./bin/uninstall`.
+`bin/install` symlinks the repo into `~/.claude/skills/css-inspector` so the skill Claude Code loads is always the repo's HEAD. To remove: `./bin/uninstall`. If your skills live elsewhere, set `CLAUDE_SKILLS_DIR` before running.
 
-If you keep skills somewhere other than `~/.claude/skills`, set `CLAUDE_SKILLS_DIR` before running install.
+**Requirements:** Python 3 (static-mode server) · Node.js 18+ (tests) · Claude Code.
 
-**Requirements:** Python 3 (for the static-mode server) · Node.js 18+ (for tests) · Claude Code.
+---
+
+## How changes get applied
+
+Once you paste the prompt back, Claude:
+
+1. **CSS edits** — opens the source file (path + line carried in the `<changes>` block), updates the value in place. For external stylesheets it adds an override rule to your project's CSS.
+2. **Component intents** — for `swap-variant` it finds the JSX/template element matching the selector + text + DOM-index hints, then either swaps the classname or the prop, depending on how the manifest is shaped. For `convert` (e.g. 3 Buttons → SegmentedControl) it pulls the target component's API and refactors.
+3. **Sibling reorders** — locates the parent's JSX block (using the parent selector + ancestor-chain hint), classifies how children render (literal JSX, hardcoded array, `.map()` + sort), and either applies directly or asks you for a source decision before touching `.map()` data.
+
+A unified diff is always shown before any file is written. For ambiguous cases (variant swap matches multiple sites, reorder over a sorted list), Claude asks before applying.
 
 ---
 
@@ -163,11 +164,9 @@ If you keep skills somewhere other than `~/.claude/skills`, set `CLAUDE_SKILLS_D
 ```bash
 npm test          # unit tests (selector, change tracker, copy prompt) — no install needed
 npm install       # one-time, for the e2e suite
-npm run test:e2e  # Playwright integration test for the iframe-aware picker
+npm run test:e2e  # Playwright integration test
 npm run test:all  # both
 ```
-
-The e2e test (`tests/e2e/picker.spec.mjs`) is a regression guard for the iframe-picker bug: it spawns the static-mode server, loads `inspector.html` headlessly, clicks **Select**, picks `.hero-title` inside the iframe, and asserts the selector pill updates to `#main-heading` and that the Design panel reads a real `font-size` value through `targetWin.getComputedStyle`.
 
 ---
 
@@ -175,36 +174,43 @@ The e2e test (`tests/e2e/picker.spec.mjs`) is a regression guard for the iframe-
 
 ```
 css-inspector/
-├── SKILL.md          # Claude workflow instructions (the brain)
-├── overlay.js        # Inspector panel UI — injected into your page
-├── server.py         # Local file server for static HTML projects
+├── cssinspector.svg     # Logo
+├── README.md            # This file
+├── SKILL.md             # Claude workflow instructions (the brain)
+├── PLAN.md              # Roadmap + Phase status
+├── overlay.js           # Inspector panel UI — injected into your page
+├── server.py            # Local file server for static HTML projects
+├── presets/             # Design-system preset manifests
+│   ├── shadcn.json
+│   └── icons/           # Brand SVGs (Claude, shadcn, MUI, Tailwind)
 ├── bin/
-│   ├── install       # Symlink into ~/.claude/skills/css-inspector
-│   └── uninstall     # Remove that symlink
-├── tests/
-│   ├── fixture.html              # Sample page for manual + E2E tests
-│   ├── test-selector.js          # Unit tests — selector computation
-│   ├── test-tracker.js           # Unit tests — change tracking
-│   ├── test-prompt.js            # Unit tests — copy prompt format
-│   ├── test-overlay-load.html    # Smoke test for overlay boot
-│   └── e2e/
-│       └── picker.spec.mjs       # Playwright: iframe-aware picker regression guard
+│   ├── install          # Symlink into ~/.claude/skills/css-inspector
+│   └── uninstall
+├── tests/               # Node-native unit tests + Playwright e2e
 ├── playwright.config.mjs
 └── package.json
 ```
 
 ---
 
-## Design
-
-Cold dark neutrals (`#1c1c1c` panel, `#d4d4d4` text) with Claude coral (`#DA7756`) on the selector pill, active accents, and the Copy Prompt button. Blue (`#3B82F6`) for the picker outline and Select button accent.
-
----
-
 ## Architecture notes
 
-`overlay.js` is iframe-aware. In static mode the inspector page wraps the user's `index.html` in an `<iframe>`, and the overlay panel lives in the parent document. The overlay resolves `targetDoc` / `targetWin` from `iframe.contentDocument` after the frame's `load` event, then binds the picker listeners, `getComputedStyle` reads, and `document.styleSheets` iteration against the iframe's document — so a click inside the iframe is observed correctly by a panel that lives outside it.
+`overlay.js` is iframe-aware. In static mode the inspector page wraps the user's `index.html` in an `<iframe>` and the overlay panel lives in the parent document. The overlay resolves `targetDoc` / `targetWin` from `iframe.contentDocument` after the frame's `load` event, then binds the picker listeners, `getComputedStyle` reads, and `document.styleSheets` iteration against the iframe's document — so a click inside the iframe is observed correctly by a panel that lives outside it.
+
+All floating overlays (blue selection box, pink reorder grippers, pink armed-level indicator, FAB action buttons, drag ghost) live in the **parent doc** so they escape any `overflow:hidden` ancestor in the target document. The whole inspector + its overlays use a stack of z-indices in the upper range of `2147483647` so they always sit on top of the target's content.
+
+History (CSS edits + component intents + reorders) is a **single unified array** with discriminated entries — undo / redo work uniformly across all kinds.
 
 ---
 
-Built by Aviran Revach · [Github](https://github.com/aviranrevach)
+## Design
+
+Cold dark neutrals (`#1c1c1c` panel, `#d4d4d4` text). **Coral** (`#DA7756`) for primary actions (Copy Prompt, Apply to tracker). **Blue** (`#3B82F6`) for selection. **Pink/magenta** (`#ff3d8b`) for reorder affordances — visually distinct from selection so the two don't blur together.
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE).
+
+Built by Aviran Revach · [GitHub](https://github.com/aviranrevach)

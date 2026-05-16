@@ -296,27 +296,29 @@ This is a multi-element refactor — N source elements collapse into 1 new compo
 
 ### 6c · Apply `<reorders>` (sibling reorders)
 
-Parse the `<reorders>` JSON block. Each entry:
+Parse the `<reorders>` JSON block. There is **one entry per parent**, even if the user nudged children multiple times — the inspector collapses to the net effect.
 
 ```json
-{ "action": "reorder", "parent": ".filterbar",
-  "from": 2, "to": 0,
-  "child": { "text": "All Insights", "classes": "btn primary" },
-  "siblingsSnapshot": [
-    { "text": "Open",        "classes": "btn" },
-    { "text": "Closed",      "classes": "btn" },
-    { "text": "All Insights","classes": "btn primary" }
-  ] }
+{ "action": "reorder",
+  "parent": ".filterbar",
+  "children": [
+    { "text": "Open",         "classes": "btn" },
+    { "text": "Closed",       "classes": "btn" },
+    { "text": "All Insights", "classes": "btn primary" }
+  ],
+  "order": [2, 0, 1] }
 ```
 
-`parent` is the parent's selector, `from`/`to` are the child's pre- and post-move indices in DOM order, `child` identifies which element moved (by text + classes), and `siblingsSnapshot` captures the entire pre-move child list so you can verify you found the right JSX block.
+- `parent` — selector for the parent element in source.
+- `children` — pre-mutation child list, in source order. Use this to identify the JSX block (sibling count + text/classes should match).
+- `order` — permutation array. `order[i]` is the index into `children` that should land at position `i` in the new order. In the example above, the new order is `[children[2], children[0], children[1]]` = `["All Insights", "Open", "Closed"]`.
 
-**Collapse same-parent reorders to their net effect.** If multiple entries share the same `parent`, treat them as one logical move: use the FIRST entry's `from` and the LAST entry's `to`. The user only needs to resolve the net move, not each intermediate nudge.
+The format is the same whether the user did 1 nudge or 50 — `order` always represents the final desired arrangement.
 
-**For each collapsed reorder, classify the source rendering pattern:**
+**For each reorder, classify the source rendering pattern:**
 
 1. Locate the parent's JSX element in source. Use the parent selector + ancestor-class chain (from Step 6b's disambiguation playbook) to narrow.
-2. Verify by checking that the parent's children match `siblingsSnapshot` (same count, same texts in order). If they don't match, surface a TODO — the inspector likely targeted a different render.
+2. Verify by checking that the parent's children match `children` (same count, same texts in order). If they don't match, surface a TODO — the inspector likely targeted a different render.
 3. Inspect HOW the parent renders its children:
 
 | Source pattern | Action |
