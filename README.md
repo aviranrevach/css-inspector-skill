@@ -80,18 +80,22 @@ Paste into Claude, then type your actual question. Claude has enough hooks to fi
 
 The skill is designed to be triggered conversationally. Once installed, in any VS Code project:
 
+> 💡 **Ask Claude, and a full visual editor pops into your page.** That's the whole pitch. Nothing to install in your browser, no VS Code extension, no DevTools setup, no design tool to switch into — the skill conjures the entire UI on demand and tears it down when you're done. It only exists while you need it.
+
 ### 1. Open the inspector
 
 Say any of these to Claude:
 
 > "open the CSS inspector" · "inspect my page" · "let me tweak styles visually" · "I want to redesign this UI"
 
-Claude detects your project type:
+**The inspector runs in a regular browser tab** (Chrome / Safari / Firefox — your call). It's not embedded inside VS Code. Claude detects your project type and either spins up its own localhost or piggybacks on your existing dev server:
 
-| Project | What happens |
-| --- | --- |
-| Static HTML + CSS | Starts a local server (Python 3) on `:8787`, wraps `index.html` in an iframe inside `inspector.html`, opens it in your browser. |
-| Vite / React / Vue / Next | Temporarily injects a `<script>` tag into `index.html` (or `public/index.html`) — removed when you're done. |
+| Project | Where the inspector runs | URL you open |
+| --- | --- | --- |
+| **Static HTML + CSS** | A dedicated Python 3 server Claude starts on `:8787`, serving your files **plus** an inspector wrapper page (`inspector.html`) that iframes your `index.html` and overlays the inspector panel. Independent of anything else you have running. | `http://localhost:8787/.inspector/inspector.html` |
+| **Vite / React / Vue / Next** | Your **existing dev server** (`:5173`, `:3000`, etc.). Claude temporarily injects a `<script>` tag into your project's HTML, so the inspector boots inside your normal app on the next HMR refresh. No second server. | Whatever URL your dev server already uses |
+
+Claude usually opens the right URL for you. When you're done, in live mode the injected `<script>` tag is removed automatically; in static mode the Python server is stopped.
 
 If your project's design system isn't a known preset, Claude offers to **scan your components and generate a manifest** so the Component section lights up.
 
