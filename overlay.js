@@ -961,6 +961,56 @@
       width: 8px; height: 8px; display: block;
     }
 
+    /* Element-action split button — primary action (Hide) + caret
+       that reveals a small menu (Delete). Sits at the bottom of the
+       Appearance section. Coral tint on the primary when active
+       (element currently hidden) so the toggle state is legible. */
+    .inspector-split-btn-wrap { position: relative; margin-top: 8px; }
+    .inspector-split-btn {
+      display: flex; align-items: stretch;
+      background: #252525; border: 1px solid #2e2e2e;
+      border-radius: 6px; overflow: hidden;
+    }
+    .inspector-split-btn-main {
+      flex: 1;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 6px 10px;
+      background: none; border: none; border-right: 1px solid #2e2e2e;
+      color: #d4d4d4; font: 500 11px Inter, system-ui, sans-serif;
+      cursor: pointer;
+    }
+    .inspector-split-btn-main:hover { background: #2a2a2a; color: #fff; }
+    .inspector-split-btn-main.active {
+      background: rgba(218,119,86,0.18); color: #DA7756;
+    }
+    .inspector-split-btn-main.active:hover { background: rgba(218,119,86,0.28); }
+    .inspector-split-btn-main svg { width: 14px; height: 14px; flex-shrink: 0; }
+    .inspector-split-btn-toggle {
+      flex: 0 0 28px;
+      display: flex; align-items: center; justify-content: center;
+      background: none; border: none; color: #888; cursor: pointer;
+    }
+    .inspector-split-btn-toggle:hover { background: #2a2a2a; color: #d4d4d4; }
+    .inspector-split-btn-toggle svg { width: 12px; height: 12px; }
+    .inspector-split-btn-menu {
+      display: none; position: absolute; right: 0; top: calc(100% + 4px);
+      min-width: 160px;
+      background: #1a1a1a; border: 1px solid #2e2e2e; border-radius: 6px;
+      padding: 4px; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      z-index: 100;
+    }
+    .inspector-split-btn-menu.open { display: block; }
+    .inspector-split-btn-menu button {
+      display: flex; align-items: center; gap: 8px;
+      width: 100%;
+      padding: 6px 10px;
+      background: none; border: none;
+      color: #d4d4d4; font: 500 11px Inter, system-ui, sans-serif;
+      text-align: left; cursor: pointer; border-radius: 4px;
+    }
+    .inspector-split-btn-menu button:hover { background: #c44; color: #fff; }
+    .inspector-split-btn-menu button svg { width: 12px; height: 12px; flex-shrink: 0; }
+
     /* Floating blue selection box — drawn in parent doc so it survives
        any ancestor overflow:hidden in the target. Box-shadow (not border)
        provides the outline ring without changing layout; spread doubles
@@ -3390,6 +3440,13 @@
       componentIntents.push(h.prev);
     } else if (h.kind === 'reorder') {
       revertReorder(h);
+    } else if (h.kind === 'dom-remove') {
+      // Undo a delete: re-insert the element at its original position
+      // (just before the saved `nextSibling`, or appended if it was last).
+      const dom = h.dom;
+      if (dom && dom.element && dom.parent && !dom.element.isConnected) {
+        dom.parent.insertBefore(dom.element, dom.nextSibling || null);
+      }
     }
 
     syncBadge();
@@ -4247,6 +4304,11 @@
       if (idx >= 0) componentIntents.splice(idx, 1);
     } else if (h.kind === 'reorder') {
       reapplyReorder(h);
+    } else if (h.kind === 'dom-remove') {
+      // Redo a delete: pull the element back out of the DOM.
+      if (h.dom && h.dom.element && h.dom.element.isConnected) {
+        h.dom.element.remove();
+      }
     }
 
     syncBadge();
@@ -4351,6 +4413,13 @@
       const { _parentEl, ...wire } = r;
       return `Just this reorder:\n${line}\n\n<reorders>\n${JSON.stringify([wire], null, 2)}\n</reorders>`;
     }
+    if (kind === 'dom-remove') {
+      const h = domRemoveEntries()[idx];
+      if (!h) return '';
+      const line = `- Remove \`${h.target.selector}\` (${h.target.tag}) from \`${h.parent}\``;
+      const wire = { action: 'remove', parent: h.parent, target: h.target, ancestorChain: h.ancestorChain };
+      return `Just this deletion:\n${line}\n\n<removals>\n${JSON.stringify([wire], null, 2)}\n</removals>`;
+    }
     return '';
   }
 
@@ -4359,7 +4428,9 @@
     const hasIntents = componentIntents.length > 0;
     const collapsedReorders = buildCollapsedReorders();
     const hasReorders = collapsedReorders.length > 0;
-    if (!hasChanges && !hasIntents && !hasReorders) return 'No changes to apply.';
+    const removals = domRemoveEntries();
+    const hasRemovals = removals.length > 0;
+    if (!hasChanges && !hasIntents && !hasReorders && !hasRemovals) return 'No changes to apply.';
 
     // Page context inlined into the lead sentence (reads more naturally
     // than a separate "Inspector context:" label).
@@ -4395,15 +4466,29 @@
       });
       parts.push(`**Sibling reorders** (${collapsedReorders.length}):\n` + lines.join('\n'));
     }
+    if (hasRemovals) {
+      const lines = removals.map(h =>
+        `- Remove \`${h.target.selector}\` (${h.target.tag}) from \`${h.parent}\``
+      );
+      parts.push(`**Element removals** (${removals.length}):\n` + lines.join('\n'));
+    }
     const summary = parts.join('\n\n');
 
     // Strip internal `_parentEl` (DOM ref) from the wire payload.
     const wireReorders = collapsedReorders.map(({ _parentEl, ...rest }) => rest);
+    // Removals: strip the DOM-ref so the wire payload is plain data.
+    const wireRemovals = removals.map(h => ({
+      action: 'remove',
+      parent: h.parent,
+      target: h.target,
+      ancestorChain: h.ancestorChain,
+    }));
 
     const blocks = [];
     if (hasChanges)   blocks.push(`<changes>\n${JSON.stringify(changes, null, 2)}\n</changes>`);
     if (hasIntents)   blocks.push(`<components>\n${JSON.stringify(componentIntents, null, 2)}\n</components>`);
     if (hasReorders)  blocks.push(`<reorders>\n${JSON.stringify(wireReorders, null, 2)}\n</reorders>`);
+    if (hasRemovals)  blocks.push(`<removals>\n${JSON.stringify(wireRemovals, null, 2)}\n</removals>`);
 
     const trailer = `The structured blocks below carry the same data — use them to locate the right files and verify counts. Confirm with me before writing if anything's ambiguous.`;
 
@@ -5337,6 +5422,11 @@
       </div>`;
 
     // ── APPEARANCE ──
+    // Radius first, opacity second (matches the Figma reading order).
+    // Below them: a split-button row for element-level actions —
+    // Hide element (primary, eye-shut icon) and Delete element
+    // (revealed by the dropdown caret).
+    const isHidden = cs.display === 'none';
     const appearanceHtml = `
       <div class="inspector-section">
         <div class="inspector-section-hd" style="cursor:pointer;" data-collapse="section">
@@ -5344,8 +5434,29 @@
           <button class="inspector-section-chevron" data-inspector-tip="Click to collapse/expand this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
         </div>
         <div class="inspector-g2">
-          ${iconField(icons.opacity, 'opacity', pxStr(parseFloat(cs.opacity) * 100), '%')}
           ${iconField(icons.radius, 'border-radius', pxStr(cs.borderRadius), 'px')}
+          ${iconField(icons.opacity, 'opacity', pxStr(parseFloat(cs.opacity) * 100), '%')}
+        </div>
+        <div class="inspector-split-btn-wrap">
+          <div class="inspector-split-btn">
+            <button class="inspector-split-btn-main${isHidden ? ' active' : ''}"
+                    data-action="hide"
+                    data-inspector-tip="${isHidden ? 'Show element (clear display:none)' : 'Hide element — sets display:none'}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-.722-3.25"/><path d="M2 8a10.645 10.645 0 0 0 20 0"/><path d="m20 15-1.726-2.05"/><path d="m4 15 1.726-2.05"/><path d="m9 18 .722-3.25"/></svg>
+              <span>${isHidden ? 'Show element' : 'Hide element'}</span>
+            </button>
+            <button class="inspector-split-btn-toggle"
+                    data-action="open-menu"
+                    data-inspector-tip="More element actions">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+          </div>
+          <div class="inspector-split-btn-menu" data-menu="hide">
+            <button data-action="delete">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              <span>Delete element</span>
+            </button>
+          </div>
         </div>
       </div>`;
 
@@ -5468,6 +5579,70 @@
         }
       });
     });
+
+    // ── HIDE / DELETE SPLIT BUTTON ──
+    // Primary: toggles display:none on the selected element (tracked
+    // as a normal CSS edit so the existing changes pipeline picks it
+    // up). Caret reveals a dropdown with Delete (removes the element
+    // from the DOM and pushes a `dom-remove` history entry — restored
+    // on undo via parent.insertBefore).
+    const hideBtn = panel.querySelector('[data-action="hide"]');
+    const menuBtn = panel.querySelector('[data-action="open-menu"]');
+    const menuEl  = panel.querySelector('[data-menu="hide"]');
+    const delBtn  = panel.querySelector('[data-action="delete"]');
+    if (hideBtn) {
+      hideBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!selectedElement) return;
+        const curDisplay = targetWin.getComputedStyle(selectedElement).display;
+        if (curDisplay === 'none') {
+          selectedElement.style.removeProperty('display');
+          trackChange(sel, 'display', 'none', '');
+        } else {
+          trackChange(sel, 'display', curDisplay, 'none');
+          selectedElement.style.display = 'none';
+        }
+        renderDesignPanel();
+      });
+    }
+    if (menuBtn && menuEl) {
+      menuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        menuEl.classList.toggle('open');
+      });
+      // Click outside closes the menu.
+      document.addEventListener('click', () => menuEl.classList.remove('open'));
+    }
+    if (delBtn) {
+      delBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!selectedElement) return;
+        const target = selectedElement;
+        const parent = target.parentNode;
+        if (!parent) return;
+        const confirmed = confirm(`Delete this ${target.tagName.toLowerCase()} element?\n\nIt's a destructive action — Claude will be told to remove it from source on paste-back. You can undo locally.`);
+        if (!confirmed) return;
+        const nextSibling = target.nextElementSibling;
+        const cleanCls = (cls) => (cls || '').split(/\s+/).filter(c => c && !c.startsWith('__inspector-')).join(' ');
+        history.push({
+          kind: 'dom-remove',
+          parent: computeSelector(parent),
+          dom: { element: target, parent, nextSibling },
+          target: {
+            selector: computeSelector(target),
+            tag: target.tagName.toLowerCase(),
+            text: (target.textContent || '').trim().slice(0, 80),
+            classes: cleanCls(target.className),
+          },
+          ancestorChain: captureAncestorChain(target),
+        });
+        target.remove();
+        clearSelection();
+        redoStack.length = 0;
+        syncBadge();
+        menuEl?.classList.remove('open');
+      });
+    }
 
     // ── WIRE UP ALL INPUTS ──
     wireUpInputs(panel, sel);
@@ -5965,6 +6140,9 @@
   function reorderEntries() {
     return history.filter(h => h.kind === 'reorder');
   }
+  function domRemoveEntries() {
+    return history.filter(h => h.kind === 'dom-remove');
+  }
 
   function renderChangesBar() {
     const bar = root.querySelector('#__inspector-changes-bar');
@@ -5975,7 +6153,7 @@
     // drawer + Copy Prompt). Internal history depth (e.g. 3 nudges on
     // the same list) is bookkeeping, not user-facing.
     const collapsedReorderCount = buildCollapsedReorders().length;
-    const totalCount = changes.length + componentIntents.length + collapsedReorderCount;
+    const totalCount = changes.length + componentIntents.length + collapsedReorderCount + domRemoveEntries().length;
     const hasActivity = totalCount > 0 || redoStack.length > 0;
     if (!hasActivity) {
       bar.classList.remove('visible');
@@ -6059,7 +6237,26 @@
         </div>`;
     }).join('');
 
-    const totalCount = changes.length + componentIntents.length + collapsedReorders.length;
+    // Element-removal rows (from the Delete element split-button action).
+    // Each row shows the deleted element's tag + selector + a snippet
+    // of its text. X-button undoes (re-inserts via dom-remove undo path).
+    const removals = domRemoveEntries();
+    const removalRows = removals.map((h, idx) => {
+      const lbl = `${esc(h.target.tag)} · ${esc((h.target.text || '').slice(0, 40) || '—')}`;
+      return `
+        <div class="changes-row changes-row-intent" data-row-kind="dom-remove" data-row-index="${idx}">
+          <div class="changes-row-top">
+            <span class="changes-row-selector">${esc(h.target.selector || '—')}</span>
+            <button class="changes-row-rm" data-remove-hi="${history.indexOf(h)}">×</button>
+          </div>
+          <div class="changes-row-bottom">
+            <span class="changes-row-prop">delete</span>
+            <div class="changes-row-values">${lbl}</div>
+          </div>
+        </div>`;
+    }).join('');
+
+    const totalCount = changes.length + componentIntents.length + collapsedReorders.length + removals.length;
     drawer.innerHTML = `
       <div class="changes-drawer-hd">
         <div class="changes-drawer-hd-left">
@@ -6070,6 +6267,7 @@
       </div>
       ${rows}
       ${intentRows}
+      ${removalRows}
       ${reorderRows}
       <button class="changes-bar-copy" id="__inspector-bar-copy">✦&nbsp; Copy Prompt for Claude</button>
     `;
@@ -6114,6 +6312,20 @@
         renderChangesDrawer();
         repositionSelectionOverlays();
         positionFabs();
+      });
+    });
+    // X on a delete row: re-insert the element + drop the history entry.
+    drawer.querySelectorAll('.changes-row-rm[data-remove-hi]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const hi = parseInt(btn.dataset.removeHi);
+        const h = history[hi];
+        if (h && h.kind === 'dom-remove' && h.dom && h.dom.element && h.dom.parent && !h.dom.element.isConnected) {
+          h.dom.parent.insertBefore(h.dom.element, h.dom.nextSibling || null);
+        }
+        if (h) history.splice(hi, 1);
+        redoStack.length = 0;
+        syncBadge();
+        renderChangesDrawer();
       });
     });
 
