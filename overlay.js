@@ -1573,11 +1573,11 @@
   root.innerHTML = `
     <div id="__inspector-header">
       <div id="__inspector-select-group">
-        <button id="__inspector-pick-btn" data-tip="Select — click any element on the page to inspect it" aria-label="Pick element">
+        <button id="__inspector-pick-btn" data-inspector-tip="Select — click any element on the page to inspect it" aria-label="Pick element">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M4 4l7 18 3-7 7-3z"/></svg>
           <span class="inspector-select-label">Select element</span>
         </button>
-        <button id="__inspector-multi-btn" data-tip="Multi-select — accumulate picks, apply variant changes to all at once" aria-label="Multi-select" aria-pressed="false">
+        <button id="__inspector-multi-btn" data-inspector-tip="Multi-select — accumulate picks, apply variant changes to all at once" aria-label="Multi-select" aria-pressed="false">
           <!-- Two-square stack glyph -->
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <rect x="4" y="4" width="12" height="12" rx="2"/>
@@ -1585,7 +1585,7 @@
           </svg>
         </button>
         <span id="__inspector-selector-pill" contenteditable="true" spellcheck="false">—</span>
-        <button id="__inspector-pill-clear" data-tip='Clear selection' aria-label="Clear selection">
+        <button id="__inspector-pill-clear" data-inspector-tip='Clear selection' aria-label="Clear selection">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <line x1="6" y1="6" x2="18" y2="18"/>
             <line x1="18" y1="6" x2="6" y2="18"/>
@@ -1593,26 +1593,26 @@
         </button>
       </div>
       <div id="__inspector-header-controls">
-        <button id="__inspector-deselect" data-tip="Clear selection">
+        <button id="__inspector-deselect" data-inspector-tip="Clear selection">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>
           </svg>
         </button>
-        <button id="__inspector-minimize" data-tip="Minimize — collapse panel to header bar">—</button>
-        <button id="__inspector-close" data-tip="Close inspector">✕</button>
+        <button id="__inspector-minimize" data-inspector-tip="Minimize — collapse panel to header bar">—</button>
+        <button id="__inspector-close" data-inspector-tip="Close inspector">✕</button>
       </div>
     </div>
     <div id="__inspector-tabs">
       <span class="inspector-tab active" data-tab="design">Design</span>
       <span class="inspector-tab" data-tab="raw">CSS Raw</span>
-      <span class="inspector-tab inspector-tab-icon inspector-tab-end" data-tab="about" data-tip="About">
+      <span class="inspector-tab inspector-tab-icon inspector-tab-end" data-tab="about" data-inspector-tip="About">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <circle cx="12" cy="12" r="9"/>
           <line x1="12" y1="11" x2="12" y2="17"/>
           <circle cx="12" cy="7.5" r="0.9" fill="currentColor" stroke="none"/>
         </svg>
       </span>
-      <span class="inspector-tab inspector-tab-icon" data-tab="settings" data-tip="Settings — design system preset, Claude design">
+      <span class="inspector-tab inspector-tab-icon" data-tab="settings" data-inspector-tip="Settings — design system preset, Claude design">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <circle cx="12" cy="12" r="3"/>
           <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>
@@ -1957,7 +1957,7 @@
     const rules = applicableConversions(componentName, pickCount);
     if (!rules.length) return '';
     const buttons = rules.map((r, i) =>
-      `<button class="component-convert-btn" type="button" data-convert-idx="${i}" ${r.note ? `data-tip="${esc(r.note)}"` : ''}>
+      `<button class="component-convert-btn" type="button" data-convert-idx="${i}" ${r.note ? `data-inspector-tip="${esc(r.note)}"` : ''}>
          <span class="component-convert-arrow" aria-hidden="true">→</span>
          <span>${esc(r.label || `Convert to ${r.to}`)}</span>
        </button>`
@@ -2409,7 +2409,7 @@
              <circle cx="6" cy="6" r="4.5"/>
            </svg>`;
     return `
-      <label class="${cls}" data-preset="${key}"${disabled ? ' aria-disabled="true" data-tip="Claude Design is always on"' : ''}>
+      <label class="${cls}" data-preset="${key}"${disabled ? ' aria-disabled="true" data-inspector-tip="Claude Design is always on"' : ''}>
         <input type="checkbox" name="__inspector-preset" value="${key}" ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''}>
         <span class="ds-card-radio" aria-hidden="true">${indicator}</span>
         <span class="ds-card-icon" aria-hidden="true">${PRESET_ICONS[key] || ''}</span>
@@ -2459,7 +2459,7 @@
                <span class="ds-import-label">${esc(settings.customLabel || 'Custom design system')}</span>
                <span class="ds-import-meta">${(settings.manifest?.components?.length || 0)} components loaded</span>
              </div>`
-          : `<button class="ds-import" type="button" disabled aria-disabled="true" data-tip="Coming soon">
+          : `<button class="ds-import" type="button" disabled aria-disabled="true" data-inspector-tip="Coming soon">
                <span class="ds-import-icon" aria-hidden="true">
                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                    <path d="M12 4v12"/>
@@ -2566,12 +2566,12 @@
       <div class="__inspector-about-author">
         <span>By <strong>Aviran Revach</strong></span>
         <div class="__inspector-about-links">
-          <a href="https://github.com/aviranrevach" target="_blank" rel="noopener noreferrer" data-tip="GitHub: aviranrevach">
+          <a href="https://github.com/aviranrevach" target="_blank" rel="noopener noreferrer" data-inspector-tip="GitHub: aviranrevach">
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.55v-1.94c-3.2.7-3.87-1.54-3.87-1.54-.52-1.33-1.28-1.68-1.28-1.68-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.28 1.18-3.09-.12-.29-.51-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.79 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.12 3.05.74.81 1.18 1.83 1.18 3.09 0 4.42-2.69 5.39-5.26 5.68.41.36.78 1.06.78 2.13v3.15c0 .3.21.66.8.55 4.56-1.52 7.85-5.83 7.85-10.91C23.5 5.65 18.35.5 12 .5z"/>
             </svg>
           </a>
-          <a href="https://www.aviranr.com/" target="_blank" rel="noopener noreferrer" data-tip="Website: aviranr.com">
+          <a href="https://www.aviranr.com/" target="_blank" rel="noopener noreferrer" data-inspector-tip="Website: aviranr.com">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <circle cx="12" cy="12" r="10"/>
               <path d="M2 12h20"/>
@@ -2828,7 +2828,7 @@
     // carries Clear (✕). Tooltip explains the handoff.
     const copyBtnHtml =
       `<button class="tree-copy-btn" id="__inspector-tree-copy" type="button"
-               data-tip="Paste into Claude, then type your ask — Claude will know the selected ${kind} is ${sel}.">
+               data-inspector-tip="Paste into Claude, then type your ask — Claude will know the selected ${kind} is ${sel}.">
          <svg class="tree-copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
            <rect x="8" y="2.5" width="8" height="4" rx="1" fill="currentColor" stroke="none"/>
@@ -3249,14 +3249,14 @@
   if (!root._inspectorTipsBound) {
     root._inspectorTipsBound = true;
     root.addEventListener('mouseenter', (e) => {
-      const el = e.target.closest('[data-tip]');
+      const el = e.target.closest('[data-inspector-tip]');
       if (el) {
-        showPanelTip(el.dataset.tip, el);
+        showPanelTip(el.dataset.inspectorTip, el);
         e.target.title = ''; // suppress native tooltip
       }
     }, true);
     root.addEventListener('mouseleave', (e) => {
-      if (e.target.closest('[data-tip]')) hidePanelTip();
+      if (e.target.closest('[data-inspector-tip]')) hidePanelTip();
     }, true);
   }
 
@@ -4499,8 +4499,8 @@
       <div class="layer-swatch" data-layer-swatch="${id}"><div class="layer-swatch-color" style="background:${swatchColor};"></div></div>
       ${valueHtml}
       <div class="layer-opacity-field"><input value="${opacityVal}" data-layer-opacity="${id}"><span class="fu">%</span></div>
-      <button class="layer-eye-btn${isHidden ? ' hidden' : ''}" data-layer-eye="${id}" data-tip="${isHidden ? 'Show layer' : 'Hide layer'}">${isHidden ? SVG_EYE_OFF : SVG_EYE}</button>
-      <button class="layer-minus-btn" data-layer-remove="${id}" data-tip="Remove layer">−</button>
+      <button class="layer-eye-btn${isHidden ? ' hidden' : ''}" data-layer-eye="${id}" data-inspector-tip="${isHidden ? 'Show layer' : 'Hide layer'}">${isHidden ? SVG_EYE_OFF : SVG_EYE}</button>
+      <button class="layer-minus-btn" data-layer-remove="${id}" data-inspector-tip="Remove layer">−</button>
     </div>`;
   }
 
@@ -4562,7 +4562,7 @@
       for (let c = 0; c < 3; c++) {
         const active = (c === colIdx && r === rowIdx);
         const tip = `${POS[c]}, ${POS[r]} (${axes.colProp}: ${idxToValue(c, axes.colProp)}, ${axes.rowProp}: ${idxToValue(r, axes.rowProp)})`;
-        dots += `<button class="align-pad-dot${active ? ' active' : ''}" data-align-col="${c}" data-align-row="${r}" data-tip="${esc(tip)}"></button>`;
+        dots += `<button class="align-pad-dot${active ? ' active' : ''}" data-align-col="${c}" data-align-row="${r}" data-inspector-tip="${esc(tip)}"></button>`;
       }
     }
     // Caller is responsible for the section label (e.g. "Align children")
@@ -4595,7 +4595,7 @@
     return `<div class="layer-section" id="__layer-fill">
       <div class="layer-section-hd">
         <span class="layer-section-title">Fill</span>
-        <button class="layer-add-btn" data-layer-add="fill" data-tip="Add fill layer"${hasBg ? ' disabled' : ''}>${SVG_PLUS}</button>
+        <button class="layer-add-btn" data-layer-add="fill" data-inspector-tip="Add fill layer"${hasBg ? ' disabled' : ''}>${SVG_PLUS}</button>
       </div>
       ${rowsHtml}
     </div>`;
@@ -4676,7 +4676,7 @@
     return `<div class="layer-section" id="__layer-stroke">
       <div class="layer-section-hd">
         <span class="layer-section-title">Stroke</span>
-        <button class="layer-add-btn" data-layer-add="stroke" data-tip="Add stroke"${hasBorder ? ' disabled' : ''}>${SVG_PLUS}</button>
+        <button class="layer-add-btn" data-layer-add="stroke" data-inspector-tip="Add stroke"${hasBorder ? ' disabled' : ''}>${SVG_PLUS}</button>
       </div>
       ${rowsHtml}
     </div>`;
@@ -4876,8 +4876,8 @@
     return `<div class="layer-row${isHidden ? ' layer-hidden' : ''}" data-layer-id="${id}" data-effect-type="${typeLabel}">
       <div class="layer-swatch"><div class="layer-swatch-color" style="background:${swatchColor};"></div></div>
       <div class="layer-type-dd"><select style="background:none;border:none;outline:none;color:#ccc;font-size:11px;font-family:Inter,system-ui,sans-serif;width:100%;cursor:pointer;">${opts}</select><span class="layer-dd-arrow">▾</span></div>
-      <button class="layer-eye-btn${isHidden ? ' hidden' : ''}" data-layer-eye="${id}" data-tip="Toggle effect">${isHidden ? SVG_EYE_OFF : SVG_EYE}</button>
-      <button class="layer-minus-btn" data-layer-remove="${id}" data-tip="Remove effect">−</button>
+      <button class="layer-eye-btn${isHidden ? ' hidden' : ''}" data-layer-eye="${id}" data-inspector-tip="Toggle effect">${isHidden ? SVG_EYE_OFF : SVG_EYE}</button>
+      <button class="layer-minus-btn" data-layer-remove="${id}" data-inspector-tip="Remove effect">−</button>
     </div>
     <div class="layer-detail" id="__effect-detail-${id}" style="display:none;">${buildEffectDetail(id, typeLabel)}</div>`;
   }
@@ -4914,7 +4914,7 @@
     return `<div class="layer-section" id="__layer-effects">
       <div class="layer-section-hd">
         <span class="layer-section-title">Effects</span>
-        <button class="layer-add-btn" data-layer-add="effect" data-tip="Add effect">${SVG_PLUS}</button>
+        <button class="layer-add-btn" data-layer-add="effect" data-inspector-tip="Add effect">${SVG_PLUS}</button>
       </div>
       ${rowsHtml}
     </div>`;
@@ -5098,10 +5098,10 @@
       const unitHtml = unit ? `<span class="inspector-fu">${unit}</span>` : '';
       const tip = TIPS[property] || property;
       return `<div class="inspector-field" data-prop="${property}">
-        <span class="inspector-fi" data-scrub="${property}" data-tip="${tip}">${label}</span>
+        <span class="inspector-fi" data-scrub="${property}" data-inspector-tip="${tip}">${label}</span>
         <input value="${value}" data-prop="${property}" data-sel="${sel}" data-from="${value}">
         ${unitHtml}
-        <button class="inspector-reset-btn" data-reset="${property}" data-tip="Reset ${property} to original value">×</button>
+        <button class="inspector-reset-btn" data-reset="${property}" data-inspector-tip="Reset ${property} to original value">×</button>
       </div>`;
     }
 
@@ -5109,10 +5109,10 @@
       const unitHtml = unit ? `<span class="inspector-fu">${unit}</span>` : '';
       const tip = TIPS[property] || property;
       return `<div class="inspector-field" data-prop="${property}">
-        <span class="inspector-fi" data-scrub="${property}" data-tip="${tip}">${svgHtml}</span>
+        <span class="inspector-fi" data-scrub="${property}" data-inspector-tip="${tip}">${svgHtml}</span>
         <input value="${value}" data-prop="${property}" data-sel="${sel}" data-from="${value}">
         ${unitHtml}
-        <button class="inspector-reset-btn" data-reset="${property}" data-tip="Reset ${property} to original value">×</button>
+        <button class="inspector-reset-btn" data-reset="${property}" data-inspector-tip="Reset ${property} to original value">×</button>
       </div>`;
     }
 
@@ -5151,7 +5151,7 @@
       <div class="inspector-section">
         <div class="inspector-section-hd" style="cursor:pointer;" data-collapse="section">
           <span class="inspector-section-title">Position</span>
-          <button class="inspector-section-chevron" data-tip="Click to collapse/expand this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+          <button class="inspector-section-chevron" data-inspector-tip="Click to collapse/expand this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
         </div>
         <div class="inspector-g3" style="margin-bottom:6px;">
           ${field('X', 'left', pxStr(cs.left), 'px')}
@@ -5161,9 +5161,9 @@
         <div class="inspector-row">
           ${iconField('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>', 'rotate', '0', '°')}
           <div class="inspector-ig" style="flex:1;padding:2px;gap:2px;">
-            <button class="inspector-ig-btn" data-action="reset" data-tip="${TIPS['reset']}">${icons.reset}</button>
-            <button class="inspector-ig-btn" data-action="flipH" data-tip="${TIPS['flipH']}">${icons.flipH}</button>
-            <button class="inspector-ig-btn" data-action="flipV" data-tip="${TIPS['flipV']}">${icons.flipV}</button>
+            <button class="inspector-ig-btn" data-action="reset" data-inspector-tip="${TIPS['reset']}">${icons.reset}</button>
+            <button class="inspector-ig-btn" data-action="flipH" data-inspector-tip="${TIPS['flipH']}">${icons.flipH}</button>
+            <button class="inspector-ig-btn" data-action="flipV" data-inspector-tip="${TIPS['flipV']}">${icons.flipV}</button>
           </div>
         </div>
       </div>`;
@@ -5212,10 +5212,10 @@
       const propName = `padding-${axis}`;
       const tip = `Padding ${axis === 'x' ? 'left + right' : 'top + bottom'} (drag to scrub)`;
       return `<div class="inspector-field" data-prop="${propName}">
-        <span class="inspector-fi" data-scrub="${propName}" data-tip="${tip}">${icon}</span>
+        <span class="inspector-fi" data-scrub="${propName}" data-inspector-tip="${tip}">${icon}</span>
         <input value="${displayed}" ${mixed ? 'placeholder="Mixed"' : ''} data-prop="${propName}" data-sel="${sel}" data-from="${valA}" data-from-a="${valA}" data-from-b="${valB}">
         <span class="inspector-fu">px</span>
-        <button class="inspector-reset-btn" data-reset="${propName}" data-tip="Reset to original">×</button>
+        <button class="inspector-reset-btn" data-reset="${propName}" data-inspector-tip="Reset to original">×</button>
       </div>`;
     }
 
@@ -5223,15 +5223,15 @@
       <div class="inspector-section">
         <div class="inspector-section-hd" style="cursor:pointer;" data-collapse="section">
           <span class="inspector-section-title">Layout</span>
-          <button class="inspector-section-chevron" data-tip="Click to collapse/expand this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+          <button class="inspector-section-chevron" data-inspector-tip="Click to collapse/expand this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
         </div>
 
         <div class="inspector-sub-label" style="margin-top:0;">Flow</div>
         <div class="inspector-row"><div class="inspector-ig">
-          <button class="inspector-ig-btn${isRow ? ' on' : ''}" data-flow="row" data-tip="${TIPS['row']}">${flowIcons.row}</button>
-          <button class="inspector-ig-btn${isCol ? ' on' : ''}" data-flow="column" data-tip="${TIPS['column']}">${flowIcons.col}</button>
-          <button class="inspector-ig-btn${isWrap ? ' on' : ''}" data-flow="wrap" data-tip="${TIPS['wrap']}">${flowIcons.wrap}</button>
-          <button class="inspector-ig-btn${isGrid ? ' on' : ''}" data-flow="grid" data-tip="${TIPS['grid']}">${flowIcons.grid}</button>
+          <button class="inspector-ig-btn${isRow ? ' on' : ''}" data-flow="row" data-inspector-tip="${TIPS['row']}">${flowIcons.row}</button>
+          <button class="inspector-ig-btn${isCol ? ' on' : ''}" data-flow="column" data-inspector-tip="${TIPS['column']}">${flowIcons.col}</button>
+          <button class="inspector-ig-btn${isWrap ? ' on' : ''}" data-flow="wrap" data-inspector-tip="${TIPS['wrap']}">${flowIcons.wrap}</button>
+          <button class="inspector-ig-btn${isGrid ? ' on' : ''}" data-flow="grid" data-inspector-tip="${TIPS['grid']}">${flowIcons.grid}</button>
         </div></div>
 
         <!-- Dimensions: always full-width, two columns -->
@@ -5265,12 +5265,12 @@
                the individual per-side padding fields (↑ → ↓ ←). -->
         <div class="inspector-sub-label">
           <span>Padding</span>
-          <button class="inspector-expand-link" data-expand="box" data-tip="Show the full margin + padding diagram">Show margins box</button>
+          <button class="inspector-expand-link" data-expand="box" data-inspector-tip="Show the full margin + padding diagram">Show margins box</button>
         </div>
         <div class="inspector-padding-row" style="margin-bottom:8px;">
           ${paddingShort('x', pl, pr)}
           ${paddingShort('y', pt, pb)}
-          <button class="inspector-padding-individual-btn" data-expand="individual" data-tip="Edit each side individually" aria-label="Individual padding sides">
+          <button class="inspector-padding-individual-btn" data-expand="individual" data-inspector-tip="Edit each side individually" aria-label="Individual padding sides">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M2 5.5V2.5h3"/>
               <path d="M10.5 2.5h3v3"/>
@@ -5321,13 +5321,13 @@
           </div>
         </div>
         <div class="inspector-check-pair">
-          <div class="inspector-check-row" data-check="overflow" data-tip="Clip content — overflow: hidden clips content outside the element bounds">
+          <div class="inspector-check-row" data-check="overflow" data-inspector-tip="Clip content — overflow: hidden clips content outside the element bounds">
             <div class="inspector-check-box${cs.overflow === 'hidden' ? ' on' : ''}">
               <svg viewBox="0 0 10 10" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 3.5,7.5 8.5,2"/></svg>
             </div>
             <span class="inspector-check-label">Clip content</span>
           </div>
-          <div class="inspector-check-row" data-check="box-sizing" data-tip="Border box — box-sizing: border-box makes width/height include padding and border">
+          <div class="inspector-check-row" data-check="box-sizing" data-inspector-tip="Border box — box-sizing: border-box makes width/height include padding and border">
             <div class="inspector-check-box${cs.boxSizing === 'border-box' ? ' on' : ''}">
               <svg viewBox="0 0 10 10" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 3.5,7.5 8.5,2"/></svg>
             </div>
@@ -5341,7 +5341,7 @@
       <div class="inspector-section">
         <div class="inspector-section-hd" style="cursor:pointer;" data-collapse="section">
           <span class="inspector-section-title">Appearance</span>
-          <button class="inspector-section-chevron" data-tip="Click to collapse/expand this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+          <button class="inspector-section-chevron" data-inspector-tip="Click to collapse/expand this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
         </div>
         <div class="inspector-g2">
           ${iconField(icons.opacity, 'opacity', pxStr(parseFloat(cs.opacity) * 100), '%')}
@@ -5363,7 +5363,7 @@
       <div class="inspector-section">
         <div class="inspector-section-hd" style="cursor:pointer;" data-collapse="section">
           <span class="inspector-section-title">Typography</span>
-          <button class="inspector-section-chevron" data-tip="Click to collapse/expand this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
+          <button class="inspector-section-chevron" data-inspector-tip="Click to collapse/expand this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
         </div>
         <div class="inspector-row">
           <div class="inspector-field" data-prop="font-family" style="padding-right:4px;">
@@ -5402,9 +5402,9 @@
         </div>
         <div style="font-size:10px;color:#555;margin-bottom:5px;">Text alignment</div>
         <div class="inspector-ig">
-          <button class="inspector-ig-btn${textAlign === 'left' || textAlign === 'start' ? ' on' : ''}" data-align="left" data-tip="Align text left">${alignIcons.left}</button>
-          <button class="inspector-ig-btn${textAlign === 'center' ? ' on' : ''}" data-align="center" data-tip="Align text center">${alignIcons.center}</button>
-          <button class="inspector-ig-btn${textAlign === 'right' || textAlign === 'end' ? ' on' : ''}" data-align="right" data-tip="Align text right">${alignIcons.right}</button>
+          <button class="inspector-ig-btn${textAlign === 'left' || textAlign === 'start' ? ' on' : ''}" data-align="left" data-inspector-tip="Align text left">${alignIcons.left}</button>
+          <button class="inspector-ig-btn${textAlign === 'center' ? ' on' : ''}" data-align="center" data-inspector-tip="Align text center">${alignIcons.center}</button>
+          <button class="inspector-ig-btn${textAlign === 'right' || textAlign === 'end' ? ' on' : ''}" data-align="right" data-inspector-tip="Align text right">${alignIcons.right}</button>
         </div>
       </div>`;
 
@@ -5426,15 +5426,15 @@
        </div>`;
     const scopeHtml = `
       <div class="inspector-scope-row">
-        <div class="inspector-scope-toggle" data-scope-toggle="classscope" data-tip="ON: edits apply to every element sharing this class. OFF: edits apply only to this one picked element.">
+        <div class="inspector-scope-toggle" data-scope-toggle="classscope" data-inspector-tip="ON: edits apply to every element sharing this class. OFF: edits apply only to this one picked element.">
           ${scopeCheck(settings.classScope)}
           <span>Edit by class</span>
         </div>
-        <div class="inspector-scope-toggle" data-scope-toggle="outline" data-tip="Show a persistent blue outline on the picked element">
+        <div class="inspector-scope-toggle" data-scope-toggle="outline" data-inspector-tip="Show a persistent blue outline on the picked element">
           ${scopeCheck(settings.showSelectedOutline)}
           <span>Show selection box</span>
         </div>
-        <span class="inspector-scope-target" data-tip="${esc(sel)}"><code>${esc(sel)}</code></span>
+        <span class="inspector-scope-target" data-inspector-tip="${esc(sel)}"><code>${esc(sel)}</code></span>
       </div>
     `;
 
@@ -5933,7 +5933,7 @@
     panel.innerHTML = `
       <textarea id="__inspector-css-raw" spellcheck="false">${rawText}</textarea>
       <div class="inspector-raw-toolbar">
-        <button id="__inspector-apply-raw" class="inspector-raw-apply" data-tip="Parse the CSS above and record each declaration as a tracked change. The changes appear in the bottom drawer and ship to Claude in the Copy Prompt.">
+        <button id="__inspector-apply-raw" class="inspector-raw-apply" data-inspector-tip="Parse the CSS above and record each declaration as a tracked change. The changes appear in the bottom drawer and ship to Claude in the Copy Prompt.">
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M3 8 L6.5 11.5 L13 4"/>
           </svg>
