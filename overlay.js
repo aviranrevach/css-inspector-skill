@@ -75,10 +75,16 @@
 
     #__inspector-root {
       position: fixed; top: 16px; right: 16px;
-      width: 264px; max-height: calc(100vh - 32px);
+      width: 264px;
+      /* Fixed height (capped at full viewport minus margins) so the
+         window doesn't shrink when switching to a tab that has less
+         content. Design / CSS Raw / About / Settings all share the
+         same outer size. */
+      height: calc(100vh - 32px);
+      max-height: calc(100vh - 32px);
       background: #1c1c1c; border: 1px solid #2a2a2a; border-radius: 8px;
       box-shadow: 0 16px 48px rgba(0,0,0,0.6);
-      z-index: 999999; display: flex; flex-direction: column;
+      z-index: 2147483647; display: flex; flex-direction: column;
       overflow: hidden; color: #d4d4d4; font-size: 11px;
     }
 
@@ -91,76 +97,113 @@
     #__inspector-header button,
     #__inspector-header [contenteditable] { cursor: default; }
     #__inspector-header button { cursor: pointer; }
-    /* Select group — single blue-outlined container that holds the pick
-       button and, after selection, also the selector pill + copy icon.
-       Empty state: just the Select element CTA. Selected state: arrow icon +
-       pill text + copy icon, all inline in the same outlined pill. */
+    /* Select group — a SINGLE flat flex row holding (left → right):
+       cursor icon, then either the "Select element" CTA label OR the
+       selector pill (mutually exclusive), then the copy-intro button.
+       Same metrics (padding, gap, icon size, text size) in BOTH empty
+       and selected states — the only thing that changes between them is
+       which middle element is visible. */
     #__inspector-select-group {
       flex: 1; min-width: 0;
-      display: flex; align-items: center; gap: 8px;
+      display: flex; align-items: center; gap: 4px;
       background: none; border: 1px solid #3B82F6; border-radius: 6px;
-      padding: 12px 16px;
+      padding: 8px 10px;
       color: #3B82F6; font-family: Inter, system-ui, sans-serif;
     }
-    #__inspector-select-group:has(.inspector-select-btn:hover) { background: rgba(59,130,246,0.08); }
-    /* Selected-state padding is tighter so the bordered pill matches the
-       smaller header height after selection. */
+    #__inspector-select-group:hover { background: rgba(59,130,246,0.08); }
+    /* Selected state — softly filled with 10% blue so it reads as "active". */
     #__inspector-header.has-selection #__inspector-select-group {
-      padding: 6px 10px;
+      background: rgba(59,130,246,0.10);
+    }
+    /* Pick mode active (button clicked, no selection yet) — thicker blue
+       stroke so the user sees the button is armed.  Padding is dropped by
+       1px on each side to keep the outer box the same size. */
+    #__inspector-select-group:has(#__inspector-pick-btn.active) {
+      border-width: 2px; padding: 7px 9px;
     }
 
-    .inspector-select-btn {
-      display: flex; align-items: center; gap: 10px;
-      background: none; border: none; padding: 0;
-      color: #3B82F6; font-size: 13px; font-weight: 600;
-      cursor: pointer; font-family: inherit; text-align: left;
+    /* Pick button — cursor icon + optional "Select element" label.
+       Empty state: flex:1 so the whole button (icon + label) is one big
+       clickable target.  Selected state: shrinks to icon-only (label is
+       hidden) and the selector pill takes the remaining width.  The gap
+       between icon and label here matches the parent's 4px gap, so the
+       text starts at the same offset regardless of state. */
+    #__inspector-pick-btn {
       flex: 1; min-width: 0;
+      display: flex; align-items: center; gap: 4px;
+      background: none; border: none; padding: 0; margin: 0;
+      cursor: pointer; color: #3B82F6;
+      font: inherit; text-align: left;
     }
-    .inspector-select-btn:hover { color: #3B82F6; }
-    .inspector-select-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
-    /* Once an element is picked: button shrinks to icon-only at the start
-       of the group (flex: 0) so the pill can take the remaining space. */
-    .inspector-select-btn.has-selection { flex: 0; }
-    .inspector-select-btn.has-selection .inspector-select-label { display: none; }
+    #__inspector-pick-btn svg { display: block; width: 16px; height: 16px; flex-shrink: 0; }
+    #__inspector-header.has-selection #__inspector-pick-btn { flex: 0 0 auto; }
 
-    #__inspector-pill-wrap {
-      display: none; flex: 1; align-items: center; gap: 6px; min-width: 0;
+    /* Multi-select toggle button — sits between pick button and the
+       selector text. Gray when inactive, blue when multi-pick mode is on. */
+    #__inspector-multi-btn {
+      flex: 0 0 auto;
+      display: flex; align-items: center; justify-content: center;
+      width: 22px; height: 22px;
+      background: none; border: 1px solid transparent; border-radius: 4px;
+      padding: 0; margin: 0;
+      cursor: pointer; color: #555;
     }
-    #__inspector-header.has-selection #__inspector-pill-wrap { display: flex; }
+    #__inspector-multi-btn:hover { color: #aaa; }
+    #__inspector-multi-btn svg { width: 14px; height: 14px; display: block; }
+    #__inspector-multi-btn.active {
+      color: #3B82F6; border-color: #3B82F6;
+      background: rgba(59,130,246,0.08);
+    }
+    #__inspector-multi-btn .multi-count {
+      position: absolute; top: -4px; right: -4px;
+      min-width: 14px; height: 14px; padding: 0 3px;
+      background: #3B82F6; color: #fff;
+      font-size: 9px; font-weight: 700; line-height: 14px;
+      text-align: center; border-radius: 7px;
+    }
+    #__inspector-multi-btn { position: relative; }
+
+    .inspector-select-label {
+      flex: 1; min-width: 0;
+      font-size: 12px; font-weight: 500; color: #3B82F6;
+    }
+    #__inspector-header.has-selection .inspector-select-label { display: none; }
+
+    /* Selector text — selected state only. Plain inline text, no box. */
     #__inspector-selector-pill {
-      flex: 1; background: #252525; border: 1px solid #3a3a3a;
-      border-radius: 4px; padding: 4px 9px; font-size: 10px; color: #DA7756;
+      display: none; flex: 1; min-width: 0;
+      background: transparent; border: none; padding: 0; margin: 0;
+      font-size: 12px; font-weight: 500; color: #3B82F6;
+      font-family: Inter, system-ui, sans-serif;
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-      cursor: text; outline: none; min-width: 0;
+      cursor: text; outline: none;
     }
-    #__inspector-selector-pill:focus { border-color: #888; box-shadow: none; }
-    /* Clear-selection button — back-arrow icon styled like minimize / close.
-       Hidden by default, revealed by #__inspector-header.has-selection. */
-    #__inspector-deselect {
-      display: none;
-      background: none; border: none; color: #555; cursor: pointer;
-      padding: 0 2px; flex-shrink: 0; align-items: center;
-      border-radius: 4px;
+    #__inspector-header.has-selection #__inspector-selector-pill { display: block; }
+    #__inspector-selector-pill:focus { color: #6ba5f8; }
+
+    /* Clear-selection button — selected state only, rightmost child of the
+       row. Used to be the clipboard icon; the chat-ready-intro copy action
+       moved into the tree popup. */
+    #__inspector-pill-clear {
+      display: none; flex: 0 0 auto;
+      background: none; border: none; color: #3B82F6; cursor: pointer;
+      padding: 0 2px; align-items: center; border-radius: 4px;
     }
-    #__inspector-header.has-selection #__inspector-deselect { display: flex; }
-    #__inspector-deselect svg { width: 14px; height: 14px; }
-    #__inspector-deselect:hover { color: #aaa; }
-    /* Copy-intro button — same visual weight as deselect, sits between pill and ✕ */
-    #__inspector-pill-copy {
-      background: none; border: none; color: #555; cursor: pointer;
-      padding: 0 2px; flex-shrink: 0; display: flex; align-items: center;
-      border-radius: 4px;
-    }
-    #__inspector-pill-copy svg { width: 12px; height: 12px; }
-    #__inspector-pill-copy:hover { color: #DA7756; }
-    #__inspector-pill-copy.just-copied { color: #3d9e6d; }
-    /* One-time pulse so first-time users notice the button after picking */
+    #__inspector-header.has-selection #__inspector-pill-clear { display: flex; }
+    #__inspector-pill-clear svg { width: 14px; height: 14px; }
+    #__inspector-pill-clear:hover { color: #6ba5f8; }
+
+    /* Removed: header-level deselect button (clearing happens via the
+       on-page "Clear selection ✕" badge above the selected element). */
+    #__inspector-deselect { display: none !important; }
+    /* One-time pulse so first-time users notice the copy action after
+       picking. Lives on the tree popup's chat-ready-intro link now. */
     @keyframes __inspector-copy-pulse {
       0%   { box-shadow: 0 0 0 0 rgba(218,119,86,0.55); color: #DA7756; }
       70%  { box-shadow: 0 0 0 8px rgba(218,119,86,0);   color: #DA7756; }
-      100% { box-shadow: 0 0 0 0 rgba(218,119,86,0);     color: #555; }
+      100% { box-shadow: 0 0 0 0 rgba(218,119,86,0);     color: #DA7756; }
     }
-    #__inspector-pill-copy.first-hint {
+    .tree-copy-btn.first-hint {
       animation: __inspector-copy-pulse 1.4s ease-out 2;
     }
     #__inspector-header-controls { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
@@ -201,14 +244,279 @@
     .inspector-tab:hover { color: #888; }
     .inspector-tab.active { color: #fff; border-bottom-color: #fff; }
     .inspector-tab.disabled { color: #2e2e2e; cursor: not-allowed; pointer-events: none; }
-    /* Right-aligned end tab (e.g. About) — pushed to the far right of the row. */
+    /* Right-aligned end tab (e.g. About icon) — pushed to the far right. */
     .inspector-tab-end { margin-left: auto; }
+    /* Icon-only tab (About info-circle, Settings gear). Same hit-target as
+       text tabs but renders an SVG instead of a label. */
+    .inspector-tab.inspector-tab-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 6px 4px; margin-bottom: -1px;
+    }
+    .inspector-tab.inspector-tab-icon svg { width: 14px; height: 14px; display: block; }
+    .inspector-tab.inspector-tab-icon.active { border-bottom-color: transparent; color: #3B82F6; }
+    /* Two consecutive icon-tabs (About + Settings) read as too far apart
+       under the parent's 16px gap because the icons are tiny. Pull them
+       closer so the visual spacing is comparable to "Design ↔ CSS Raw". */
+    .inspector-tab.inspector-tab-icon + .inspector-tab.inspector-tab-icon {
+      margin-left: -10px;
+    }
 
     /* ── About panel ──────────────────────────────────────────────────────── */
     #__inspector-panel-about { padding: 16px 14px; color: #aaa; font-size: 11px; line-height: 1.55; }
     #__inspector-panel-about h3 { font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 8px; }
     #__inspector-panel-about p { margin-bottom: 10px; }
     #__inspector-panel-about strong { color: #e0e0e0; font-weight: 600; }
+
+    /* Scope row — sits between the Component section and Position.
+       Hosts two toggles + a tag showing the active selector. Compact:
+       small 12px checkbox + 10px label, tight padding. */
+    .inspector-scope-row {
+      padding: 4px 10px;
+      border-bottom: 1px solid #252525;
+      font-size: 10px;
+      display: flex; align-items: center; gap: 10px;
+      flex-wrap: wrap;
+    }
+    .inspector-scope-toggle {
+      display: inline-flex; align-items: center; gap: 5px;
+      cursor: pointer; color: #c0c0c0; user-select: none;
+    }
+    .inspector-scope-toggle:hover { color: #fff; }
+    /* Override the default 14px .inspector-check-box for the scope-row
+       only — these toggles read as secondary controls, not primary
+       checkboxes, so 12px feels more proportional to the row text. */
+    .inspector-scope-toggle .inspector-check-box { width: 12px; height: 12px; }
+    .inspector-scope-toggle .inspector-check-box svg { width: 8px; height: 8px; }
+    .inspector-scope-target {
+      color: #777; font-size: 10px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      min-width: 0; flex: 1; margin-left: auto;
+      text-align: right;
+    }
+    .inspector-scope-target code {
+      color: #DA7756; font-family: monospace;
+      background: rgba(218,119,86,0.08);
+      padding: 1px 4px; border-radius: 3px;
+    }
+
+    /* ── Component section (Design tab) ─────────────────────────────────── */
+    .component-section { padding-top: 14px; }
+    .component-badge {
+      font-size: 10px; font-weight: 600; color: #fff;
+      background: #3B82F6; padding: 2px 7px; border-radius: 4px;
+      margin-left: auto;
+    }
+    .component-badge-muted { background: #2e2e2e; color: #888; }
+    .component-source {
+      font-family: monospace; font-size: 10px; color: #777;
+      margin: 2px 0 10px; word-break: break-all;
+    }
+    .component-row {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 6px;
+    }
+    .component-prop-label {
+      font-size: 11px; color: #888; min-width: 56px; flex-shrink: 0;
+    }
+    .component-prop-select {
+      flex: 1; background: #252525; border: 1px solid #2e2e2e; border-radius: 4px;
+      height: 28px; padding: 0 8px;
+      color: #ccc; font-size: 11px; font-family: Inter, system-ui, sans-serif;
+      outline: none; cursor: pointer;
+    }
+    .component-prop-select:hover  { border-color: #3a3a3a; }
+    .component-prop-select:focus  { border-color: #3B82F6; }
+    .component-fallback-msg {
+      font-size: 10.5px; color: #888; line-height: 1.5; margin-bottom: 10px;
+    }
+    .component-ask-btn {
+      width: 100%; padding: 8px 10px;
+      background: transparent; color: #3B82F6;
+      border: 1px solid #3B82F6; border-radius: 4px;
+      font-size: 11px; font-weight: 600; cursor: pointer;
+      font-family: inherit;
+    }
+    .component-ask-btn:hover { background: rgba(59,130,246,0.08); }
+    .component-empty { font-size: 10.5px; color: #666; font-style: italic; }
+
+    /* Convert-to block — sits below the variant dropdowns. Renders one
+       button per applicable conversion rule (filtered by from-name +
+       pick count via applicableConversions()). */
+    .component-convert-block {
+      margin-top: 12px; padding-top: 10px;
+      border-top: 1px solid #252525;
+    }
+    .component-convert-title {
+      font-size: 9px; font-weight: 700; color: #555;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+    .component-convert-btn {
+      display: flex; align-items: center; gap: 8px;
+      width: 100%; padding: 7px 10px; margin-bottom: 4px;
+      background: #252525; color: #c0c0c0;
+      border: 1px solid #2e2e2e; border-radius: 4px;
+      font: 600 11px/1.2 inherit;
+      cursor: pointer; text-align: left;
+      transition: background 0.1s, border-color 0.1s, color 0.1s;
+    }
+    .component-convert-btn:hover {
+      background: rgba(59,130,246,0.08);
+      border-color: #3B82F6; color: #fff;
+    }
+    .component-convert-arrow {
+      color: #3B82F6; font-weight: 700; flex-shrink: 0;
+    }
+
+    /* Intent rows in the changes drawer get a subtle blue tint so they read
+       as design-system actions, not raw CSS edits. */
+    .changes-row.changes-row-intent {
+      background: rgba(59,130,246,0.05);
+      border-left: 2px solid rgba(59,130,246,0.5);
+    }
+    .changes-row.changes-row-intent .changes-row-prop {
+      color: #3B82F6;
+    }
+
+    /* ── Settings panel ─────────────────────────────────────────────────── */
+    #__inspector-panel-settings { padding: 16px 14px; color: #aaa; font-size: 11px; line-height: 1.55; }
+    .settings-section { margin-bottom: 18px; }
+    .settings-section h3 { font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 10px; }
+    .settings-detect-row { color: #ccc; margin-bottom: 4px; }
+    .settings-detect-row strong { color: #e0e0e0; }
+    .settings-detect-conf { color: #888; margin-left: 4px; font-size: 10px; }
+    .settings-detect-empty { color: #777; font-style: italic; }
+    .settings-detect-signals {
+      color: #777; font-size: 10px; margin-bottom: 10px;
+      word-break: break-all; line-height: 1.7;
+    }
+    .settings-detect-signals code {
+      background: #252525; padding: 1px 5px; border-radius: 3px;
+      font-family: monospace; font-size: 9.5px; color: #aaa;
+    }
+    /* Design-system card grid (matches the Figma plugin reference). 2-column
+       layout, each card is icon-above-label with a small radio indicator
+       pinned to the top-left corner. Selected card shows a filled
+       indicator with a checkmark; the card body itself stays neutral so
+       the grid reads quietly until you focus a row. */
+    .ds-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 4px;
+      margin-top: 10px;
+    }
+    .ds-grid-secondary { display: none; }
+    .ds-grid-secondary.open { display: grid; }
+    .ds-card {
+      position: relative; height: 59px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 4px;
+      background: #252525; border: 1px solid #2e2e2e; border-radius: 4px;
+      cursor: pointer; user-select: none;
+      transition: background 0.1s, border-color 0.1s;
+    }
+    .ds-card:hover { background: #2a2a2a; border-color: #3a3a3a; }
+    .ds-card.ds-card-checked { border-color: #3B82F6; }
+    /* Locked card (Claude Design baseline): same look as checked, but no
+       hover feedback and the cursor signals it's not toggleable. */
+    .ds-card.ds-card-locked { cursor: default; }
+    .ds-card.ds-card-locked:hover { background: #252525; border-color: #3B82F6; }
+    .ds-card input { position: absolute; opacity: 0; pointer-events: none; }
+    .ds-card-radio {
+      position: absolute; top: 5px; left: 5px;
+      width: 12px; height: 12px;
+      display: flex; align-items: center; justify-content: center;
+      color: #555;
+    }
+    .ds-card-radio svg { width: 12px; height: 12px; display: block; }
+    .ds-card.ds-card-checked .ds-card-radio { color: #3B82F6; }
+    .ds-card-icon {
+      width: 24px; height: 24px;
+      display: flex; align-items: center; justify-content: center;
+      color: #c0c0c0;
+    }
+    .ds-card-icon svg { width: 24px; height: 24px; display: block; }
+    .ds-card-label {
+      font-size: 11px; font-weight: 600; color: #c0c0c0;
+      text-align: center; line-height: 1.1;
+      max-width: calc(100% - 16px);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+
+    .ds-see-more {
+      width: 100%; margin: 6px 0 10px;
+      background: none; border: none; padding: 4px;
+      color: #c0c0c0; font-family: inherit;
+      font-size: 11px; font-weight: 600; text-align: center;
+      cursor: pointer;
+    }
+    .ds-see-more:hover { color: #fff; }
+
+    .ds-import {
+      width: 100%; height: 62px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 3px;
+      background: #252525; border: 1px solid #2e2e2e; border-radius: 4px;
+      cursor: pointer; user-select: none;
+      color: #c0c0c0; font-family: inherit;
+      transition: background 0.1s, border-color 0.1s;
+    }
+    .ds-import:hover:not(:disabled) { background: #2a2a2a; border-color: #3a3a3a; }
+    .ds-import:disabled {
+      cursor: not-allowed; opacity: 0.45;
+      background: #202020; color: #777;
+    }
+    .ds-import:disabled:hover { background: #202020; border-color: #2e2e2e; }
+    .ds-import-icon { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; color: #888; }
+    .ds-import-icon svg { width: 18px; height: 18px; display: block; }
+    .ds-import-label { font-size: 11px; font-weight: 600; }
+    .ds-import-soon {
+      font-size: 9px; font-weight: 600; color: #666;
+      text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    /* Loaded state: custom manifest is active. Card looks like a checked
+       preset card (blue border + checkmark top-left) with a meta line
+       showing how many components were detected. */
+    .ds-import.ds-import-loaded {
+      position: relative;
+      background: #252525; border-color: #3B82F6;
+      opacity: 1; color: #c0c0c0;
+      cursor: default;
+    }
+    .ds-import.ds-import-loaded:hover { background: #252525; border-color: #3B82F6; }
+    .ds-import-check {
+      position: absolute; top: 5px; left: 5px;
+      width: 12px; height: 12px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .ds-import-check svg { width: 12px; height: 12px; display: block; }
+    .ds-import-meta {
+      font-size: 9px; font-weight: 500; color: #777;
+      letter-spacing: 0.03em;
+    }
+
+    .settings-foot {
+      margin-top: 14px; padding-top: 12px;
+      border-top: 1px solid #252525;
+      color: #777; font-size: 10.5px; line-height: 1.55;
+    }
+    .settings-foot strong { color: #c0c0c0; font-weight: 600; }
+    /* Small pill next to section titles for features still in beta. */
+    .settings-beta {
+      display: inline-block; vertical-align: middle;
+      margin-left: 6px; padding: 1px 6px;
+      background: rgba(218,119,86,0.14); color: #DA7756;
+      border: 1px solid rgba(218,119,86,0.35); border-radius: 9px;
+      font: 600 9px/1.4 Inter, system-ui, sans-serif;
+      text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    /* Toggle row inside Settings (boolean preferences). */
+    .settings-toggle {
+      display: flex; align-items: flex-start; gap: 10px;
+      cursor: pointer; padding: 6px 0;
+      color: #c0c0c0;
+    }
+    .settings-toggle input { accent-color: #3B82F6; cursor: pointer; margin-top: 3px; }
+    .settings-toggle strong { color: #e0e0e0; display: block; margin-bottom: 2px; }
+    .settings-sub { color: #777; font-size: 10px; line-height: 1.5; }
     .__inspector-about-sep {
       height: 1px; background: #252525; margin: 14px 0 12px;
     }
@@ -235,7 +543,7 @@
     .inspector-panel.active { display: block; }
 
     /* Sections */
-    .inspector-section { padding: 12px 12px; border-bottom: 1px solid #252525; }
+    .inspector-section { padding: 10px 10px; border-bottom: 1px solid #252525; }
     .inspector-section:last-child { border-bottom: none; }
     .inspector-section.collapsed > *:not(.inspector-section-hd) { display: none; }
     .inspector-section.collapsed { padding-bottom: 4px; }
@@ -247,14 +555,15 @@
     .inspector-section-chevron:hover { color: #888; }
     .inspector-section-chevron svg { width: 13px; height: 13px; }
     .inspector-section.collapsed .inspector-section-chevron { transform: rotate(-90deg); }
-    .inspector-section-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .inspector-section-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
     .inspector-section-title { font-size: 11px; font-weight: 600; color: #c0c0c0; }
 
-    /* Fields (28px height) */
+    /* Fields (28px height) — internal padding kept tight so short values
+       like "auto" don't get clipped when 3 fields share a row in g3. */
     .inspector-field {
       display: flex; align-items: center;
       background: #252525; border: 1px solid #2e2e2e; border-radius: 4px;
-      height: 28px; padding: 0 8px; gap: 6px; flex: 1; min-width: 0;
+      height: 28px; padding: 0 6px; gap: 4px; flex: 1; min-width: 0;
     }
     .inspector-field:hover { border-color: #3a3a3a; }
     .inspector-field:focus-within { border-color: #DA7756; }
@@ -265,7 +574,7 @@
     }
     .inspector-fi {
       color: #555; font-size: 9px; flex-shrink: 0;
-      cursor: ew-resize; user-select: none; width: 14px; text-align: center;
+      cursor: ew-resize; user-select: none; width: 11px; text-align: center;
     }
     .inspector-fi svg { width: 11px; height: 11px; display: block; }
     .inspector-fu { font-size: 10px; color: #555; flex-shrink: 0; }
@@ -289,8 +598,48 @@
 
     /* Grids and rows */
     .inspector-g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-    .inspector-g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
-    .inspector-row { display: flex; gap: 6px; margin-bottom: 6px; }
+    .inspector-g3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
+    .inspector-row { display: flex; gap: 4px; margin-bottom: 6px; }
+
+    /* 50/50 split row used in the Layout section when the picked element
+       is a flex/grid container — left half is the alignment pad, right
+       half stacks the W and H fields vertically. Falls back to the
+       single-row dimensions when the pad isn't rendered. */
+    .inspector-layout-split {
+      display: flex; gap: 8px;
+      margin-bottom: 8px;
+    }
+    .inspector-layout-half { flex: 1; min-width: 0; }
+    .inspector-stack-v {
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .inspector-stack-v .inspector-field { flex: 0 0 28px; width: 100%; }
+
+    /* 3×3 alignment pad for flex / grid containers (Figma-style). Each
+       dot is a click-target that maps to a (horizontal, vertical) pair.
+       Pad is only rendered when the picked element is a flex/grid
+       container; see buildAlignmentPad. Sized to ~match the stacked
+       W/H column on the right so the split row reads as a single block. */
+    .inspector-align-pad {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 0;
+      width: 100%; aspect-ratio: 1 / 1; max-height: 60px;
+      background: #1f1f1f; border: 1px solid #2e2e2e; border-radius: 4px;
+      padding: 6px;
+    }
+    .align-pad-dot {
+      background: none; border: none; padding: 0; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+    }
+    .align-pad-dot::before {
+      content: ''; display: block;
+      width: 4px; height: 4px; border-radius: 50%;
+      background: #444; transition: background 0.1s, transform 0.1s;
+    }
+    .align-pad-dot:hover::before { background: #888; transform: scale(1.5); }
+    .align-pad-dot.active::before {
+      background: #3B82F6; transform: scale(1.8);
+    }
     .inspector-row:last-child { margin-bottom: 0; }
     .inspector-sub-label {
       font-size: 10px; color: #555; margin: 8px 0 5px;
@@ -318,8 +667,17 @@
       background: #1a1a1a; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
     }
     .inspector-check-box.on { background: #fff; border-color: #fff; }
-    .inspector-check-box svg { width: 10px; height: 10px; }
+    .inspector-check-box svg { width: 10px; height: 10px; stroke: transparent; }
+    /* Checkmark visibility flows from the .on class, not from an inline
+       SVG attr — otherwise toggling at runtime can't change the check. */
+    .inspector-check-box.on svg { stroke: #1c1c1c; }
     .inspector-check-label { font-size: 11px; color: #888; }
+    /* Side-by-side row holding two check controls (e.g. Clip content +
+       Border box) so they read as paired toggles instead of stacked rows. */
+    .inspector-check-pair {
+      display: flex; gap: 18px; margin-top: 7px;
+    }
+    .inspector-check-pair .inspector-check-row { margin-top: 0; flex: 1; min-width: 0; }
 
     /* Color field */
     .inspector-color-field {
@@ -337,13 +695,42 @@
       color: #ccc; font-size: 11px; font-family: Inter, system-ui, sans-serif; width: 100%;
     }
 
-    /* Expand button */
+    /* Expand button — chevron rotates 180° when the spacing panel is open. */
     .inspector-expand-btn {
       background: none; border: none; color: #444; cursor: pointer; padding: 0;
-      display: flex; align-items: center;
+      display: flex; align-items: center; line-height: 1;
+      transition: transform 0.15s, color 0.1s;
     }
     .inspector-expand-btn svg { width: 13px; height: 13px; }
     .inspector-expand-btn:hover { color: #888; }
+    .inspector-expand-btn.open { transform: rotate(180deg); color: #888; }
+
+    /* "Show margins box" text link in the Padding label row. Inherits
+       the sub-label's 10px size; blue accent. */
+    .inspector-expand-link {
+      background: none; border: none; padding: 0;
+      color: #3B82F6; cursor: pointer;
+      font: inherit; /* picks up sub-label's 10px from parent */
+      letter-spacing: 0.02em;
+    }
+    .inspector-expand-link:hover { color: #6ba5f8; text-decoration: underline; }
+
+    /* Padding row: x-field | y-field | individual-sides icon. The icon
+       sits flush against the y-field on the right (Figma layout). */
+    .inspector-padding-row {
+      display: flex; align-items: center; gap: 4px;
+    }
+    .inspector-padding-row .inspector-field { flex: 1; min-width: 0; }
+    .inspector-padding-individual-btn {
+      flex: 0 0 22px; height: 22px;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: none; border: none; padding: 0;
+      color: #555; cursor: pointer; border-radius: 3px;
+      transition: color 0.1s, background 0.1s;
+    }
+    .inspector-padding-individual-btn svg { width: 13px; height: 13px; display: block; }
+    .inspector-padding-individual-btn:hover { color: #ccc; background: rgba(255,255,255,0.04); }
+    .inspector-padding-individual-btn.active { color: #3B82F6; background: rgba(59,130,246,0.1); }
 
     /* Spacing widget */
     .inspector-sp-widget { background: #111; border: 1px solid #252525; border-radius: 5px; overflow: hidden; }
@@ -450,8 +837,147 @@
     .layer-detail-opacity { display: flex; align-items: center; background: #252525; border: 1px solid #2e2e2e; border-radius: 4px; height: 24px; padding: 0 5px; width: 50px; gap: 2px; flex-shrink: 0; }
     .layer-detail-opacity input { background: none; border: none; outline: none; color: #ccc; font-size: 10px; font-family: Inter, system-ui, sans-serif; width: 100%; text-align: right; }
 
-    /* Picker highlight + tooltip */
-    .__inspector-highlight { outline: 2px solid #3B82F6 !important; outline-offset: 1px !important; cursor: crosshair !important; }
+    /* Pick-mode hover: class only sets the cursor now — the visible
+       blue ring is drawn by a floating overlay in the parent doc
+       (.__inspector-pick-hover-overlay) so it can't be clipped by
+       ancestor overflow:hidden boxes. */
+    .__inspector-highlight { cursor: crosshair !important; }
+    /* Floating overlay that follows the cursor-hovered element during
+       pick mode. Same outline behavior as the selection overlay —
+       2px ring with a 1px outer offset. */
+    .__inspector-pick-hover-overlay {
+      position: fixed;
+      pointer-events: none;
+      background: transparent;
+      box-shadow: 0 0 0 2px #3B82F6;
+      z-index: 2147483640;
+      display: none;
+    }
+
+    /* Reorder grippers — hollow pink rings per sibling. The hit box IS
+       the full visible disc (9×9 by default) so the transparent center
+       still registers mousedown — clicking the "hole" picks up the
+       sibling as if the circle were filled. Layering uses INSET shadows
+       from the outer edge inward:
+         · 1px white outer outline (0–1px from edge)
+         · 1px pink ring          (1–2px from edge)
+         · 1px white inner stroke (2–3px from edge)
+         · transparent center
+       On hover the element scales to 2× so the active grabbable pops. */
+    /* The gripper element itself is a transparent 17×17 HIT PAD —
+       generous enough that a slightly-off cursor still grabs the
+       handle. The visible disc (small pink ring with white outer
+       outline + inner stroke + transparent hole) is drawn by the
+       ::before pseudo-element, centered inside the pad. The pad
+       expands the proximity zone without making the visual louder. */
+    .__inspector-gripper {
+      position: fixed;
+      width: 17px; height: 17px;
+      background: transparent;
+      border: none;
+      z-index: 2147483643;
+      cursor: grab;
+      pointer-events: auto;
+    }
+    .__inspector-gripper::before {
+      content: '';
+      position: absolute;
+      width: 7px; height: 7px;
+      left: 50%; top: 50%;
+      margin-left: -3.5px; margin-top: -3.5px;
+      border-radius: 50%;
+      background: transparent;
+      box-shadow:
+        inset 0 0 0 1px #fff,
+        inset 0 0 0 2px #ff3d8b,
+        inset 0 0 0 3px #fff;
+      transform: scale(1);
+      transform-origin: center;
+      transition: transform 110ms ease-out;
+    }
+    /* Hover doubles the visible disc — current hover ≈ 14×14, default
+       ≈ half of that. The hit pad stays 17×17 either way. */
+    .__inspector-gripper:hover::before { transform: scale(2); }
+    .__inspector-gripper:active { cursor: grabbing; }
+
+    /* Decorative gap bars — 1.5px pink line with a 1px white outer
+       outline, sitting in each gap between siblings. No interaction;
+       future feature will repurpose them as gap-size handles. */
+    .__inspector-gap-bar {
+      position: fixed;
+      background: #ff3d8b;
+      box-shadow: 0 0 0 1px #fff;
+      border-radius: 1px;
+      z-index: 2147483641;
+      pointer-events: none;
+    }
+
+    /* Floating action buttons near the selected element.
+       FAB-A (horizontal) sits at the top-right corner: Reselect + Clear.
+       FAB-B (vertical)   sits at the right edge centered: Select parent +
+       Select first sibling. Both follow the selection on scroll/resize. */
+    .__inspector-fab {
+      position: fixed;
+      display: none;
+      align-items: center;
+      background: #3B82F6;
+      border-radius: 4px;
+      padding: 2px;
+      gap: 1px;
+      z-index: 2147483645;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+      pointer-events: auto;
+      font-family: Inter, system-ui, sans-serif;
+    }
+    .__inspector-fab.visible { display: inline-flex; }
+    .__inspector-fab.vertical { flex-direction: column; align-items: stretch; }
+    .__inspector-fab button {
+      width: 13px; height: 13px;
+      background: transparent; border: none;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: #fff;
+      border-radius: 2px; padding: 0; margin: 0;
+    }
+    .__inspector-fab button:hover:not(:disabled) {
+      background: rgba(255,255,255,0.20);
+    }
+    .__inspector-fab button:disabled {
+      opacity: 0.35; cursor: not-allowed;
+    }
+    .__inspector-fab button svg {
+      width: 8px; height: 8px; display: block;
+    }
+
+    /* Floating blue selection box — drawn in parent doc so it survives
+       any ancestor overflow:hidden in the target. Box-shadow (not border)
+       provides the outline ring without changing layout; spread doubles
+       to 2px when the cursor is over the picked element. */
+    .__inspector-selection-overlay {
+      position: fixed;
+      pointer-events: none;
+      background: transparent;
+      box-shadow: 0 0 0 1px #3B82F6;
+      z-index: 2147483640;
+      transition: box-shadow 80ms ease-out;
+    }
+    .__inspector-selection-overlay.hovered {
+      box-shadow: 0 0 0 2px #3B82F6;
+    }
+    /* Marker class for the currently-selected element(s). Used for
+       querying / cleanup only — the visible selection box is now
+       drawn as a floating overlay in the parent doc (see the
+       .__inspector-selection-overlay rules below), so it can't be
+       clipped by ancestor overflow:hidden boxes. */
+    /* Numbered badge floating at the top-left of each multi-picked element. */
+    .__inspector-multi-badge {
+      position: fixed; z-index: 1000002;
+      min-width: 18px; height: 18px; padding: 0 5px;
+      background: #3B82F6; color: #fff;
+      font: 600 10px/18px Inter, system-ui, -apple-system, sans-serif;
+      text-align: center; border-radius: 9px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+      pointer-events: none; user-select: none;
+    }
     #__inspector-tooltip {
       position: fixed; background: #1a1a1a; border: 1px solid #333; border-radius: 4px;
       padding: 4px 8px; font-size: 11px; color: #888; pointer-events: none; z-index: 1000000; display: none;
@@ -600,6 +1126,27 @@
     }
     .changes-bar-copy:hover { background: #c96844; }
 
+    /* CSS Raw tab bottom toolbar — matches the style of the changes
+       drawer's Copy Prompt button so the inspector reads as one
+       consistent action surface across tabs. */
+    .inspector-raw-toolbar {
+      padding: 8px 10px;
+      border-top: 1px solid #2a2a2a;
+      background: #161616;
+    }
+    .inspector-raw-apply {
+      width: 100%;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 8px 12px;
+      background: #DA7756; color: #fff;
+      border: none; border-radius: 6px;
+      font: 600 12px Inter, system-ui, sans-serif;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .inspector-raw-apply:hover { background: #c96844; }
+    .inspector-raw-apply svg { width: 14px; height: 14px; stroke: currentColor; }
+
     /* ── Element tree popup ── */
     #__inspector-tree-popup {
       display: none; position: fixed; z-index: 1000002;
@@ -611,6 +1158,21 @@
     }
     #__inspector-tree-popup::-webkit-scrollbar { display: none; }
     #__inspector-tree-popup.visible { display: block; }
+    /* Chat-ready-intro CTA — pinned to the top of the tree popup. Blue
+       text link with a small clipboard icon on its left. Used to be a
+       header-only icon; now lives here so the header can carry the X. */
+    .tree-copy-btn {
+      display: flex; align-items: center; justify-content: flex-end;
+      gap: 6px; width: 100%;
+      margin: 0; padding: 8px 12px;
+      background: none; border: none;
+      color: #3B82F6; font-family: inherit;
+      font-size: 11px; font-weight: 600;
+      cursor: pointer; user-select: none;
+    }
+    .tree-copy-btn:hover { color: #6ba5f8; }
+    .tree-copy-btn.just-copied { color: #3d9e6d; }
+    .tree-copy-icon { width: 13px; height: 13px; display: block; flex-shrink: 0; }
     .tree-section-label {
       padding: 5px 12px 3px; font-size: 8px; font-weight: 700;
       text-transform: uppercase; letter-spacing: 0.1em; color: #3a3a3a; background: #1a1a1a;
@@ -802,27 +1364,70 @@
   styleEl.textContent = STYLES;
   document.head.appendChild(styleEl);
 
-  // Highlight class needs to apply to elements inside the target document.
+  // Highlight classes need to apply to elements inside the target document.
   // In live mode targetDoc === document and this is a no-op; in static mode
-  // it's required for the picker outline to render inside the iframe.
+  // it's required for both the pick-mode hover AND the persistent post-pick
+  // blue outline to render inside the iframe.
   let targetStyleEl = null;
   if (targetDoc !== document) {
     targetStyleEl = targetDoc.createElement('style');
     targetStyleEl.id = '__inspector-target-styles';
     targetStyleEl.textContent = `
       .__inspector-highlight {
-        outline: 2px solid #3B82F6 !important;
-        outline-offset: 1px !important;
         cursor: crosshair !important;
       }
+      /* .__inspector-selected-highlight: marker class only — the
+         visible blue selection box is now a floating overlay in the
+         parent doc so it survives any ancestor overflow:hidden. */
     `;
     targetDoc.head.appendChild(targetStyleEl);
+  }
+
+  // Live class-scope stylesheet — when settings.classScope is on, every
+  // tracked change is mirrored here as a `selector { prop: value !important }`
+  // rule so all matching elements update in the live preview (matching what
+  // the eventual source edit will do). Rebuilt from scratch on each change.
+  let liveChangesStyleEl = null;
+  function ensureLiveChangesStyleEl() {
+    if (liveChangesStyleEl) return;
+    liveChangesStyleEl = targetDoc.createElement('style');
+    liveChangesStyleEl.id = '__inspector-live-changes';
+    targetDoc.head.appendChild(liveChangesStyleEl);
+  }
+  function rebuildLiveChangesStyles() {
+    if (!settings.classScope) {
+      if (liveChangesStyleEl) liveChangesStyleEl.textContent = '';
+      return;
+    }
+    ensureLiveChangesStyleEl();
+    const grouped = {};
+    changes.forEach(c => {
+      if (!c.selector || !c.property) return;
+      if (!grouped[c.selector]) grouped[c.selector] = [];
+      grouped[c.selector].push(`${c.property}: ${c.to} !important`);
+    });
+    liveChangesStyleEl.textContent = Object.entries(grouped)
+      .map(([sel, decls]) => `${sel} { ${decls.join('; ')} }`)
+      .join('\n');
   }
 
   // ── State ──────────────────────────────────────────────────────────────────
   let selectedElement = null;
   let pickMode = false;
+  // Multi-select state. When `multiPickMode` is true, picks accumulate
+  // into `selectedElements` instead of replacing the primary. The primary
+  // (`selectedElement`) tracks the most-recently-picked element so single-
+  // element panels (Position, Layout, etc.) keep something to show.
+  let multiPickMode = false;
+  let selectedElements = [];   // additional picks beyond the primary
+  let multiBadges = [];        // floating numbered badges, one per pick
   const changes = [];
+  // Unified chronological log of every mutation across both lanes
+  // (CSS edits + component intents, plus future reorders). Source of
+  // truth for undo ordering. `changes[]` and `componentIntents[]`
+  // remain the live state — renderer and wire format read from them
+  // unchanged. Each history entry has a `kind` discriminator.
+  const history = [];
   const redoStack = [];
   const cssMap = window.__inspectorCssMap || {};
 
@@ -912,19 +1517,24 @@
   root.innerHTML = `
     <div id="__inspector-header">
       <div id="__inspector-select-group">
-        <button class="inspector-select-btn" id="__inspector-pick-btn" data-tip="Select — click any element on the page to inspect it">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4l7 18 3-7 7-3z"/></svg>
+        <button id="__inspector-pick-btn" data-tip="Select — click any element on the page to inspect it" aria-label="Pick element">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M4 4l7 18 3-7 7-3z"/></svg>
           <span class="inspector-select-label">Select element</span>
         </button>
-        <div id="__inspector-pill-wrap">
-          <span id="__inspector-selector-pill" contenteditable="true" spellcheck="false">—</span>
-          <button id="__inspector-pill-copy" data-tip='Copy a chat-ready intro &mdash; paste into Claude, then type your ask'>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <rect x="9" y="9" width="13" height="13" rx="2"/>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-            </svg>
-          </button>
-        </div>
+        <button id="__inspector-multi-btn" data-tip="Multi-select — accumulate picks, apply variant changes to all at once" aria-label="Multi-select" aria-pressed="false">
+          <!-- Two-square stack glyph -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="4" y="4" width="12" height="12" rx="2"/>
+            <path d="M8 20h10a2 2 0 0 0 2-2V8"/>
+          </svg>
+        </button>
+        <span id="__inspector-selector-pill" contenteditable="true" spellcheck="false">—</span>
+        <button id="__inspector-pill-clear" data-tip='Clear selection' aria-label="Clear selection">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="6" y1="6" x2="18" y2="18"/>
+            <line x1="18" y1="6" x2="6" y2="18"/>
+          </svg>
+        </button>
       </div>
       <div id="__inspector-header-controls">
         <button id="__inspector-deselect" data-tip="Clear selection">
@@ -939,12 +1549,25 @@
     <div id="__inspector-tabs">
       <span class="inspector-tab active" data-tab="design">Design</span>
       <span class="inspector-tab" data-tab="raw">CSS Raw</span>
-      <span class="inspector-tab inspector-tab-end" data-tab="about">About</span>
+      <span class="inspector-tab inspector-tab-icon inspector-tab-end" data-tab="about" data-tip="About">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"/>
+          <line x1="12" y1="11" x2="12" y2="17"/>
+          <circle cx="12" cy="7.5" r="0.9" fill="currentColor" stroke="none"/>
+        </svg>
+      </span>
+      <span class="inspector-tab inspector-tab-icon" data-tab="settings" data-tip="Settings — design system preset, Claude design">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>
+        </svg>
+      </span>
     </div>
     <div id="__inspector-panels">
       <div class="inspector-panel active" id="__inspector-panel-design"></div>
       <div class="inspector-panel" id="__inspector-panel-raw"></div>
       <div class="inspector-panel" id="__inspector-panel-about"></div>
+      <div class="inspector-panel" id="__inspector-panel-settings"></div>
     </div>
     <div id="__inspector-changes-bar">
       <div class="changes-bar-drawer" id="__inspector-bar-drawer"></div>
@@ -1086,6 +1709,9 @@
   tooltip.id = '__inspector-tooltip';
   document.body.appendChild(tooltip);
 
+  // HTML-escape helper, reused across renderers.
+  const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
   // ── Tab switching ──────────────────────────────────────────────────────────
   function switchTab(tabName) {
     const tabEl = root.querySelector(`.inspector-tab[data-tab="${tabName}"]`);
@@ -1096,9 +1722,739 @@
     root.querySelectorAll('.inspector-panel').forEach(p => {
       p.classList.toggle('active', p.id === `__inspector-panel-${tabName}`);
     });
-    if (tabName === 'design') renderDesignPanel();
-    if (tabName === 'raw') renderCssRaw();
-    if (tabName === 'about') renderAbout();
+    if (tabName === 'design')   renderDesignPanel();
+    if (tabName === 'raw')      renderCssRaw();
+    if (tabName === 'about')    renderAbout();
+    if (tabName === 'settings') renderSettings();
+  }
+
+  // ── Settings ──────────────────────────────────────────────────────────────
+  // The host page injects `window.__inspectorSettings` (written by the
+  // skill's setup step into `.inspector/settings.json` and inlined into
+  // inspector.html). That file is the durable source of truth. Runtime
+  // changes from the Settings panel mutate this in-memory object only; we
+  // intentionally do NOT persist them to localStorage, because cross-
+  // project localStorage bleed-through used to silently overwrite a fresh
+  // project's manifest with stale settings from a previous one.
+  const DEFAULT_SETTINGS = {
+    detection: { detected: [], recommended: null },
+    preset: 'claude',
+    manifest: { components: [] },
+    // Picker features that are off by default to keep the surface area
+    // small for first-time users. Users opt in via the Settings panel.
+    multiSelect: false,
+    // When on, the Component section shows an "Ask Claude what this could
+    // be" button whenever the picked element doesn't match any manifest
+    // entry. Off by default — keeps the panel quiet when detection misses.
+    askClaudeFallback: false,
+    // When on (default), CSS property changes apply to every element that
+    // matches the tracked selector — same scope the source edit will have
+    // when the user pastes the prompt to Claude. The picked element still
+    // gets an inline style for instant feedback; siblings update via an
+    // injected <style> rule. When off, only the picked element changes.
+    classScope: true,
+    // When on (default), the picked element shows a persistent 2px blue
+    // outline so users can see what's selected. Off = no outline.
+    showSelectedOutline: true,
+  };
+  function loadSettings() {
+    const fromHost = (typeof window !== 'undefined' && window.__inspectorSettings) || null;
+    return { ...DEFAULT_SETTINGS, ...(fromHost || {}) };
+  }
+  function saveSettings(partial) {
+    settings = { ...settings, ...partial };
+  }
+  let settings = loadSettings();
+
+  // ── Design-system component matching ──────────────────────────────────────
+  // Tracks user-issued component intents (variant swaps, conversions) so the
+  // Copy Prompt can emit a <components> block alongside <changes>.
+  const componentIntents = [];
+
+  function activeManifest() {
+    // Settings can disable the manifest entirely by selecting "none".
+    if (!settings || settings.preset === 'none') return { components: [] };
+    return (settings.manifest && Array.isArray(settings.manifest.components))
+      ? settings.manifest
+      : { components: [] };
+  }
+
+  function classListOf(el) {
+    return el && el.classList ? Array.from(el.classList) : [];
+  }
+
+  function hasClassContains(el, fragment) {
+    return classListOf(el).some(c => c.indexOf(fragment) !== -1);
+  }
+
+  // Walk the manifest and return the first component whose match rules
+  // are satisfied by the given element. Returns null if no match.
+  //
+  // Accepts EITHER shape per entry:
+  //   { name, match: { tag, anyClassContains, allClassContains }, props }
+  //   { name, tag, anyClassContains, allClassContains, props }         // shorthand
+  // The shorthand makes hand-authored manifests less error-prone.
+  // A component with no match rules at all is intentionally treated as
+  // "match nothing" (rather than matching everything by accident).
+  function matchComponent(el) {
+    if (!el) return null;
+    const manifest = activeManifest();
+    const classes = classListOf(el);
+    for (const comp of manifest.components) {
+      const m = comp.match || comp;
+      const hasAnyRule = m.tag
+        || (Array.isArray(m.anyClass) && m.anyClass.length)
+        || (Array.isArray(m.allClass) && m.allClass.length)
+        || (Array.isArray(m.anyClassContains) && m.anyClassContains.length)
+        || (Array.isArray(m.allClassContains) && m.allClassContains.length);
+      if (!hasAnyRule) continue;
+      if (m.tag && el.tagName && el.tagName.toLowerCase() !== String(m.tag).toLowerCase()) continue;
+      // Exact-class match rules — prefer these for components signaled by
+      // a standalone class name (e.g. <button class="btn primary">).
+      if (Array.isArray(m.anyClass) && m.anyClass.length) {
+        if (!m.anyClass.some(c => classes.includes(c))) continue;
+      }
+      if (Array.isArray(m.allClass) && m.allClass.length) {
+        if (!m.allClass.every(c => classes.includes(c))) continue;
+      }
+      // Substring-class match rules (legacy, looser).
+      if (Array.isArray(m.anyClassContains) && m.anyClassContains.length) {
+        if (!m.anyClassContains.some(f => hasClassContains(el, f))) continue;
+      }
+      if (Array.isArray(m.allClassContains) && m.allClassContains.length) {
+        if (!m.allClassContains.every(f => hasClassContains(el, f))) continue;
+      }
+      return comp;
+    }
+    return null;
+  }
+
+  // For a given prop definition, walk its ordered `detect` rules and return
+  // the first variant value whose class signal is present. Falls back to
+  // the prop's `default` if nothing matches.
+  //
+  // Two rule shapes are supported per `detect` entry:
+  //   { "if": "tier-pro",      "value": "pro" }   ← substring match (loose)
+  //   { "hasClass": "primary", "value": "primary" } ← exact class match (strict)
+  // Use `hasClass` whenever the variant is signaled by a standalone class
+  // (e.g. `btn primary` style) so live-swap can toggle that class cleanly.
+  function detectVariantValue(el, propDef) {
+    if (!propDef) return undefined;
+    const rules = Array.isArray(propDef.detect) ? propDef.detect : [];
+    const classes = classListOf(el);
+    for (const r of rules) {
+      if (!r) continue;
+      if (r.hasClass && classes.includes(r.hasClass)) return r.value;
+      if (r.if && hasClassContains(el, r.if)) return r.value;
+    }
+    return propDef.default;
+  }
+
+  // Returns the single class name the inspector should add/remove when
+  // switching to (or away from) this rule's value. Prefers `hasClass`; for
+  // `if` rules, only returns it when the value looks like a real class
+  // name (no spaces).
+  function ruleToggleClass(rule) {
+    if (!rule) return null;
+    if (rule.hasClass) return rule.hasClass;
+    if (rule.if && !/\s/.test(rule.if)) return rule.if;
+    return null;
+  }
+
+  // Build the Component section that sits at the top of the Design tab.
+  // Three states:
+  //   1. Manifest matched a component → name, source, variant dropdowns.
+  //   2. No match but Claude-design fallback is on → "Ask Claude" CTA.
+  //   3. No match and fallback off → return '' (section hidden entirely).
+  // Conversions are stored at the top level of the manifest. Filter them
+  // by the current component name and the number of picks (`minCount` /
+  // optional `maxCount`). Returns the applicable rules in declaration order.
+  function applicableConversions(componentName, pickCount) {
+    const manifest = activeManifest();
+    const rules = Array.isArray(manifest.conversions) ? manifest.conversions : [];
+    return rules.filter(r => {
+      if (!r || r.from !== componentName) return false;
+      const min = typeof r.minCount === 'number' ? r.minCount : 1;
+      const max = typeof r.maxCount === 'number' ? r.maxCount : Infinity;
+      return pickCount >= min && pickCount <= max;
+    });
+  }
+
+  function conversionsHtml(componentName, pickCount) {
+    const rules = applicableConversions(componentName, pickCount);
+    if (!rules.length) return '';
+    const buttons = rules.map((r, i) =>
+      `<button class="component-convert-btn" type="button" data-convert-idx="${i}" ${r.note ? `data-tip="${esc(r.note)}"` : ''}>
+         <span class="component-convert-arrow" aria-hidden="true">→</span>
+         <span>${esc(r.label || `Convert to ${r.to}`)}</span>
+       </button>`
+    ).join('');
+    return `
+      <div class="component-convert-block">
+        <div class="component-convert-title">Convert to…</div>
+        ${buttons}
+      </div>
+    `;
+  }
+
+  function buildComponentSection(el, sel) {
+    const picks = allSelected();
+    // ── Multi-pick path ─────────────────────────────────────────────────
+    if (picks.length > 1) {
+      const matches = picks.map(p => matchComponent(p));
+      const first = matches[0];
+      const allSame = first && matches.every(m => m && m.name === first.name);
+      if (allSame) {
+        // All picks share the same component. Variant dropdowns show the
+        // common value when uniform, "(mixed)" when picks disagree.
+        const propsHtml = Object.entries(first.props || {}).map(([propName, def]) => {
+          const values = picks.map(p => detectVariantValue(p, def));
+          const uniform = values.every(v => v === values[0]) ? values[0] : null;
+          const opts = (def.values || []).map(v =>
+            `<option value="${esc(v)}"${v === uniform ? ' selected' : ''}>${esc(v)}</option>`
+          ).join('');
+          const mixedOpt = uniform == null
+            ? `<option value="__mixed__" selected disabled>(mixed)</option>`
+            : '';
+          return `<div class="component-row">
+            <span class="component-prop-label">${esc(propName)}</span>
+            <select class="component-prop-select" data-prop="${esc(propName)}" data-from="${esc(uniform ?? '__mixed__')}">
+              ${mixedOpt}${opts}
+            </select>
+          </div>`;
+        }).join('');
+        return `
+          <div class="inspector-section component-section component-section-multi" data-component="${esc(first.name)}">
+            <div class="inspector-section-hd">
+              <span class="inspector-section-title">Component identified</span>
+              <span class="component-badge">${esc(first.name)} × ${picks.length}</span>
+            </div>
+            ${first.source ? `<div class="component-source">${esc(first.source)}</div>` : ''}
+            ${propsHtml || '<div class="component-empty">No variants defined.</div>'}
+            ${conversionsHtml(first.name, picks.length)}
+          </div>
+        `;
+      }
+      // Mixed types in multi-pick. Always show the badge + breakdown so
+      // the user sees what's selected; the Ask-Claude action is gated on
+      // the settings.askClaudeFallback toggle.
+      const counts = matches.reduce((acc, m) => {
+        const key = m ? m.name : '(unknown)';
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      }, {});
+      const breakdown = Object.entries(counts).map(([k, n]) => `${esc(k)} × ${n}`).join(' · ');
+      const askBtn = settings && settings.askClaudeFallback
+        ? `<button class="component-ask-btn" type="button">Ask Claude what these could become</button>`
+        : '';
+      return `
+        <div class="inspector-section component-section component-section-fallback">
+          <div class="inspector-section-hd">
+            <span class="inspector-section-title">Component identified</span>
+            <span class="component-badge component-badge-muted">Mixed (${picks.length})</span>
+          </div>
+          <div class="component-fallback-msg">${breakdown}</div>
+          ${askBtn}
+        </div>
+      `;
+    }
+    // ── Single-pick path (existing) ─────────────────────────────────────
+    const comp = matchComponent(el);
+    if (comp) {
+      const propsHtml = Object.entries(comp.props || {}).map(([propName, def]) => {
+        const current = detectVariantValue(el, def);
+        const opts = (def.values || []).map(v =>
+          `<option value="${esc(v)}"${v === current ? ' selected' : ''}>${esc(v)}</option>`
+        ).join('');
+        return `<div class="component-row">
+          <span class="component-prop-label">${esc(propName)}</span>
+          <select class="component-prop-select" data-prop="${esc(propName)}" data-from="${esc(current ?? '')}">
+            ${opts}
+          </select>
+        </div>`;
+      }).join('');
+      return `
+        <div class="inspector-section component-section" data-component="${esc(comp.name)}">
+          <div class="inspector-section-hd">
+            <span class="inspector-section-title">Component identified</span>
+            <span class="component-badge">${esc(comp.name)}</span>
+          </div>
+          ${comp.source ? `<div class="component-source">${esc(comp.source)}</div>` : ''}
+          ${propsHtml || '<div class="component-empty">No variants defined.</div>'}
+          ${conversionsHtml(comp.name, 1)}
+        </div>
+      `;
+    }
+    // No-match branch. Component section is hidden by default to keep the
+    // panel quiet; the user opts in via Settings → Ask Claude to surface
+    // the fallback action when the manifest doesn't recognize an element.
+    if (settings && settings.preset !== 'none' && settings.askClaudeFallback) {
+      const isClaude = settings.preset === 'claude';
+      return `
+        <div class="inspector-section component-section component-section-fallback">
+          <div class="inspector-section-hd">
+            <span class="inspector-section-title">Component identified</span>
+            <span class="component-badge component-badge-muted">${isClaude ? 'Identify' : 'Unknown'}</span>
+          </div>
+          <div class="component-fallback-msg">${isClaude
+            ? 'Claude design — every pick is identified on the fly. Copy the prompt to ask Claude what this is and what variants make sense.'
+            : 'No preset match. Ask Claude to identify this and suggest variants.'}</div>
+          <button class="component-ask-btn" type="button">Ask Claude what this could be</button>
+        </div>
+      `;
+    }
+    return '';
+  }
+
+  function wireComponentSection(panel, el, sel) {
+    const section = panel.querySelector('.component-section');
+    if (!section) return;
+    const componentName = section.dataset.component;
+    // Re-resolve so we can read the matched component's prop defs. In
+    // multi-pick mode `el` is the primary; we apply changes to every pick
+    // whose match.name === componentName.
+    const matchedComp = matchComponent(el);
+    section.querySelectorAll('.component-prop-select').forEach(select => {
+      select.addEventListener('change', (e) => {
+        const prop = e.target.dataset.prop;
+        const to   = e.target.value;
+        if (to === '__mixed__') return;
+        const def = matchedComp?.props?.[prop];
+        const rules = Array.isArray(def?.detect) ? def.detect : [];
+        const toCls = ruleToggleClass(rules.find(r => r.value === to));
+        // Targets: every currently-selected element whose match has the
+        // same component name. In single-pick mode this collapses to [el].
+        const targets = allSelected().filter(p => {
+          const m = matchComponent(p);
+          return m && m.name === componentName;
+        });
+        // Two-pass: snapshot every target's pre-swap identity FIRST (so all
+        // selector / domIndex / text values are computed against the same
+        // un-mutated DOM), then apply the swaps + emit intents.
+        const pre = targets.map(target => {
+          const current = detectVariantValue(target, def);
+          const origSel = computeSelector(target);
+          return {
+            target, current, origSel,
+            ctx: capturePickContext(target, origSel),
+          };
+        });
+        pre.forEach(({ target, current, origSel, ctx }) => {
+          if (current === to) return;
+          const fromCls = ruleToggleClass(rules.find(r => r.value === current));
+          if (fromCls) target.classList.remove(fromCls);
+          if (toCls)   target.classList.add(toCls);
+          recordComponentIntent({
+            action: 'swap-variant',
+            selector: origSel,
+            component: componentName,
+            prop,
+            from: current,
+            to,
+            ...ctx,
+          }, { element: target, fromCls, toCls });
+        });
+        // After applying, the dropdown's "from" baseline is the new value.
+        e.target.dataset.from = to;
+      });
+    });
+    const askBtn = section.querySelector('.component-ask-btn');
+    if (askBtn) {
+      askBtn.addEventListener('click', () => {
+        const tag = el?.tagName?.toLowerCase() || '?';
+        const classes = classListOf(el).join(' ');
+        const intro = `Help me identify this element as a design-system component.\n` +
+          `Selector: \`${sel}\`\n` +
+          `Tag: \`${tag}\`\n` +
+          `Classes: \`${classes}\`\n` +
+          `What component is this likely to be, what variants/alternatives make sense, and what swap or refactor would you suggest?`;
+        if (navigator.clipboard?.writeText) {
+          navigator.clipboard.writeText(intro).then(() => {
+            askBtn.textContent = '✓ Copied — paste into Claude';
+            setTimeout(() => { askBtn.textContent = 'Ask Claude what this could be'; }, 2000);
+          });
+        }
+      });
+    }
+    // Convert-to buttons → emit a `convert` intent covering every picked
+    // element that matches the source component. The intent carries each
+    // pick's pinpoint context so paste-back can locate them in source.
+    section.querySelectorAll('.component-convert-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx  = parseInt(btn.dataset.convertIdx, 10);
+        const componentName = section.dataset.component;
+        const rules = applicableConversions(componentName, allSelected().length);
+        const rule  = rules[idx];
+        if (!rule) return;
+        const targets = allSelected().filter(p => {
+          const m = matchComponent(p);
+          return m && m.name === componentName;
+        });
+        const pickContexts = targets.map(t => {
+          const s = computeSelector(t);
+          return { selector: s, ...capturePickContext(t, s) };
+        });
+        recordComponentIntent({
+          action: 'convert',
+          from: rule.from,
+          to: rule.to,
+          label: rule.label || `Convert to ${rule.to}`,
+          note: rule.note,
+          source: rule.source || null,
+          selectors: pickContexts.map(p => p.selector),
+          picks: pickContexts,
+        });
+        // Brief visual confirmation; the intent now lives in the Changes
+        // bar and will ship in the Copy Prompt.
+        const label = btn.querySelector('span:last-child');
+        const orig = label?.textContent;
+        if (label) label.textContent = '✓ Queued';
+        setTimeout(() => { if (label && orig) label.textContent = orig; }, 1500);
+      });
+    });
+  }
+
+  // Capture disambiguation hints for the paste-back source-lookup step.
+  // - `text`: trimmed visible text (first 80 chars). Lets the consumer grep
+  //   the JSX for a unique-ish match when the selector hits many sites.
+  // - `domIndex`: 0-based position of this element among same-selector
+  //   matches in DOM order. Fallback for icon-only / empty-text elements.
+  function capturePickContext(el, selector) {
+    if (!el) return {};
+    const out = {};
+    const text = (el.textContent || '').replace(/\s+/g, ' ').trim();
+    if (text) out.text = text.slice(0, 80);
+    try {
+      const sameSelectorAll = Array.from(targetDoc.querySelectorAll(selector));
+      const idx = sameSelectorAll.indexOf(el);
+      if (idx >= 0 && sameSelectorAll.length > 1) out.domIndex = idx;
+    } catch (_) {
+      // querySelectorAll can throw on selectors with characters it doesn't
+      // understand; skip the index hint when that happens.
+    }
+    return out;
+  }
+
+  // Two intents target the same logical thing when their action,
+  // selector, prop, and pinpoint hints (text + domIndex) all agree.
+  // Lifted to module scope so undo/redo can match intents by identity.
+  function sameIntentTarget(a, b) {
+    return a.action === b.action &&
+      a.selector === b.selector &&
+      a.prop === b.prop &&
+      (a.text || null) === (b.text || null) &&
+      (a.domIndex ?? null) === (b.domIndex ?? null);
+  }
+
+  function recordComponentIntent(intent, dom) {
+    // Replace existing intents for the SAME target — so toggling a
+    // dropdown back and forth on one element only keeps the latest
+    // value. Different elements sharing a selector (e.g. several
+    // `.status-pill.product`s) are distinguished by `text` and
+    // `domIndex`, so they each get their own intent entry.
+    //
+    // `dom` is optional metadata { element, fromCls, toCls } describing
+    // the live DOM mutation that was applied to produce this intent.
+    // It stays in-memory only (history) and never goes on the wire — so
+    // undo/redo can reverse / re-apply the class swap.
+    const idx = componentIntents.findIndex(i => sameIntentTarget(i, intent));
+    redoStack.length = 0;
+    if (idx >= 0) {
+      const prev = componentIntents[idx];
+      componentIntents[idx] = intent;
+      history.push({ kind: 'intent-update', prev, next: intent, dom });
+    } else {
+      componentIntents.push(intent);
+      history.push({ kind: 'intent-add', next: intent, dom });
+    }
+    syncBadge();
+  }
+
+  const PRESET_LABELS = {
+    'claude':   'Claude design — let Claude identify components on the fly',
+    'shadcn':   'shadcn/ui',
+    'mui':      'Material UI',
+    'chakra':   'Chakra UI',
+    'mantine':  'Mantine',
+    'antd':     'Ant Design',
+    'nextui':   'NextUI',
+    'tailwind': 'Tailwind (utility-only)',
+    'custom':   'Custom file (.inspector/design-system.json)',
+    'none':     'None',
+  };
+
+  // Brand glyphs for each preset radio. Where possible these are the
+  // simple-icons (https://simpleicons.org) brand paths — single-color SVGs
+  // that read cleanly at 14px and inherit currentColor for tinting. Where
+  // an official mark doesn't simplify well at this size, a clean typographic
+  // letter mark stands in (MUI, Mantine, NextUI, Claude).
+  const PRESET_ICONS = {
+    // Claude — exact Anthropic "asterisk" mark sourced from the Figma design.
+    'claude':
+      `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+         <path d="M6.70431 14.8698L10.1333 12.9457L10.1906 12.778L10.1333 12.6853H9.96557L9.39187 12.65L7.43247 12.597L5.73344 12.5264L4.08736 12.4382L3.67253 12.3499L3.28418 11.838L3.3239 11.582L3.67253 11.3481L4.17121 11.3923L5.27448 11.4673L6.92938 11.582L8.12973 11.6526L9.9082 11.838H10.1906L10.2304 11.7233L10.1333 11.6526L10.0582 11.582L8.34597 10.4214L6.49248 9.19456L5.52161 8.48847L4.99645 8.13101L4.73167 7.79562L4.61693 7.06305L5.09354 6.53789L5.73344 6.58202L5.89672 6.62615L6.54544 7.12483L7.93115 8.19721L9.74051 9.52995L10.0053 9.75061L10.1112 9.67559L10.1244 9.62263L10.0053 9.42404L9.02118 7.64557L7.97086 5.83621L7.50308 5.08599L7.37951 4.63586C7.33538 4.45051 7.30449 4.29605 7.30449 4.10629L7.8473 3.3693L8.14739 3.27222L8.87113 3.3693L9.17563 3.63409L9.62577 4.66233L10.3539 6.28193L11.4837 8.48406L11.8147 9.13719L11.9912 9.74178L12.0574 9.92713H12.1721V9.82122L12.2648 8.58114L12.4369 7.05863L12.6046 5.09923L12.662 4.5476L12.9356 3.88563L13.4784 3.52818L13.902 3.73118L14.2507 4.22985L14.2021 4.55201L13.9947 5.898L13.5887 8.00744L13.3239 9.41963H13.4784L13.6549 9.24311L14.3698 8.29429L15.5702 6.79385L16.0997 6.19808L16.7176 5.54054L17.1148 5.22721H17.865L18.4166 6.04804L18.1695 6.89535L17.3972 7.87505L16.7573 8.70471L15.8394 9.94037L15.2657 10.9289L15.3186 11.0083L15.4554 10.9951L17.5296 10.5538L18.6505 10.3508L19.9877 10.1213L20.5923 10.4037L20.6585 10.6906L20.4201 11.2775L18.9903 11.6306L17.3133 11.966L14.8155 12.5573L14.7846 12.5794L14.82 12.6235L15.9453 12.7294L16.4263 12.7559H17.6046L19.7979 12.9192L20.3716 13.2987L20.7158 13.7621L20.6585 14.1151L19.7758 14.5653L18.5843 14.2828L15.8041 13.6209L14.8508 13.3826H14.7185V13.462L15.5128 14.2387L16.9691 15.5538L18.7917 17.2484L18.8844 17.6677L18.6505 17.9986L18.4034 17.9633L16.8014 16.7586L16.1836 16.2158L14.7846 15.0375H14.692V15.161L15.0141 15.6332L16.7176 18.1928L16.8058 18.9783L16.6823 19.2343L16.241 19.3888L15.7555 19.3005L14.7582 17.9016L13.7299 16.3261L12.9003 14.9139L12.7988 14.9713L12.3089 20.2449L12.0794 20.5141L11.5499 20.7171L11.1086 20.3817L10.8747 19.8389L11.1086 18.7665L11.391 17.3676L11.6205 16.2555L11.8279 14.8742L11.9515 14.4152L11.9426 14.3843L11.8411 14.3976L10.7996 15.8274L9.21535 17.9678L7.96204 19.3093L7.66195 19.4285L7.14121 19.1593L7.18975 18.6783L7.48101 18.2502L9.21535 16.0437L10.2612 14.6756L10.9364 13.8857L10.932 13.7709H10.8923L6.28507 16.763L5.46424 16.8689L5.11119 16.5379L5.15532 15.9951L5.32302 15.8186L6.70872 14.8654L6.70431 14.8698Z" fill="#D97757"/>
+       </svg>`,
+    // shadcn — two-slash mark sourced from the Figma design (white on dark).
+    'shadcn':
+      `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+         <path d="M17.3122 3.8964C17.6287 3.86711 17.8407 3.88235 18.1273 4.0249C18.7765 4.34781 19.062 5.29281 18.6027 5.89196C18.2968 6.29099 17.7345 6.79921 17.3464 7.19046L13.9996 10.5362L8.54509 15.9905L7.09728 17.4378C6.76583 17.773 6.4344 18.1148 6.09201 18.439C5.88545 18.6346 5.72572 18.717 5.45453 18.7932C5.42885 18.8002 5.40287 18.8061 5.37668 18.8108C4.40825 18.9813 3.58658 17.9669 3.96902 17.0163C4.08066 16.7389 4.50981 16.3423 4.73274 16.1205L5.53033 15.326L8.47756 12.3799L14.134 6.72132L15.6888 5.16609C15.9856 4.86734 16.2865 4.55503 16.5939 4.26784C16.8199 4.05672 17.0054 3.94586 17.3122 3.8964Z" fill="#fff"/>
+         <path d="M18.7525 11.037C19.4244 10.9772 20.0655 11.5128 20.1099 12.1882C20.1376 12.6091 20.0566 12.9046 19.7584 13.2145C19.3221 13.6679 18.8724 14.109 18.4273 14.5541L15.7981 17.1834L14.0222 18.9597C13.7631 19.2189 13.5057 19.4808 13.2418 19.7352C12.9985 19.9697 12.7741 20.0883 12.4339 20.109C12.0424 20.1166 11.8171 20.0773 11.5043 19.8294C10.9226 19.3683 10.8689 18.4795 11.3716 17.9413C11.6892 17.6013 12.0269 17.2808 12.3567 16.949C13.1035 16.193 13.855 15.4416 14.611 14.6948C15.3795 13.9177 16.1521 13.1448 16.929 12.376C17.2756 12.0302 17.6171 11.6638 17.9797 11.3347C18.2107 11.1251 18.4472 11.063 18.7525 11.037Z" fill="#fff"/>
+       </svg>`,
+    // Material UI — multi-color M from the Figma design (clip path made
+    // unique so it doesn't collide with any other inline SVG on the page).
+    'mui':
+      `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+         <g clip-path="url(#__inspector-clip-mui)">
+           <path d="M2 12.7218V4.06177L9.5 8.39177V11.2784L4.5 8.39177V14.1651L2 12.7218Z" fill="#00B0FF"/>
+           <path d="M9.5 8.39177L17 4.06177V12.7218L12 15.6084L9.5 14.1651L14.5 11.2784V8.39177L9.5 11.2784V8.39177Z" fill="#0081CB"/>
+           <path d="M9.5 14.165V17.0517L14.5 19.9384V17.0517L9.5 14.165Z" fill="#00B0FF"/>
+           <path d="M14.5 19.9384L22 15.6084V9.8351L19.5 11.2784V14.1651L14.5 17.0518V19.9384ZM19.5 8.39177V5.5051L22 4.06177V6.94843L19.5 8.39177Z" fill="#0081CB"/>
+         </g>
+         <defs>
+           <clipPath id="__inspector-clip-mui">
+             <rect width="20" height="15.88" fill="white" transform="translate(2 4.06006)"/>
+           </clipPath>
+         </defs>
+       </svg>`,
+    // Chakra UI — official "lightning in circle" mark in Chakra teal.
+    'chakra':
+      `<svg viewBox="0 0 24 24" fill="#319795" aria-hidden="true">
+         <path d="M12 0c6.627 0 12 5.373 12 12s-5.373 12-12 12S0 18.627 0 12 5.373 0 12 0zm1.49 6.084c.063-.516-.633-.793-.962-.379l-6.703 8.45a.591.591 0 0 0 .461.964h5.039l-.514 4.243c-.063.515.633.792.962.379l6.703-8.45a.591.591 0 0 0-.461-.965l-5.039-.001.514-4.241z"/>
+       </svg>`,
+    // Mantine — typographic M inside a rounded square, Mantine blue.
+    'mantine':
+      `<svg viewBox="0 0 24 24" fill="none" stroke="#339AF0" stroke-width="2" stroke-linejoin="round" aria-hidden="true">
+         <rect x="3" y="3" width="18" height="18" rx="4"/>
+         <path d="M7 17V9l5 5 5-5v8" stroke-linecap="round"/>
+       </svg>`,
+    // Ant Design — geometric ant glyph in Ant blue.
+    'antd':
+      `<svg viewBox="0 0 24 24" fill="#1677FF" aria-hidden="true">
+         <path d="M12 0c6.627 0 12 5.373 12 12s-5.373 12-12 12S0 18.627 0 12 5.373 0 12 0zm-.5 4.5a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5zm0 5.75a2 2 0 0 0-2 2v.5a2 2 0 0 0 2 2 2 2 0 0 0 2-2v-.5a2 2 0 0 0-2-2zm0 5.75a2.25 2.25 0 1 0 0 4.5 2.25 2.25 0 0 0 0-4.5zM5 9.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm14 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM5 12.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm14 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/>
+       </svg>`,
+    // NextUI — stylized N, neutral (their brand uses gradients we can't fake well).
+    'nextui':
+      `<svg viewBox="0 0 24 24" fill="none" stroke="#e0e0e0" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+         <path d="M5 19V5l14 14V5"/>
+       </svg>`,
+    // Tailwind CSS — official wave glyph from the Figma design, with the
+    // teal→cyan brand gradient. IDs prefixed to avoid collisions when
+    // other inline SVGs are present on the page.
+    'tailwind':
+      `<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+         <g clip-path="url(#__inspector-clip-tailwind)">
+           <path d="M12 4.74414C8.7984 4.74414 6.82096 6.34492 5.97349 9.54648C7.19762 7.9457 8.61007 7.38072 10.2109 7.75738C11.1525 7.9457 11.7175 8.60485 12.4708 9.35816C13.6949 10.5823 15.0132 11.9947 18.0264 11.9947C21.228 11.9947 23.2054 10.394 24.0529 7.19239C22.8288 8.79317 21.4163 9.35816 19.8155 8.9815C18.8739 8.69901 18.3089 8.03987 17.5556 7.28656C16.3315 6.15659 15.0132 4.74414 12 4.74414ZM5.97349 11.9947C2.77193 11.9947 0.794494 13.5955 -0.0529785 16.7971C1.17115 15.1963 2.5836 14.6313 4.18438 15.008C5.12602 15.1963 5.691 15.8554 6.44431 16.6088C7.66844 17.8329 8.98673 19.2453 12 19.2453C15.2015 19.2453 17.179 17.6446 18.0264 14.3488C16.8023 15.9496 15.3898 16.6088 13.7891 16.2321C12.8474 15.9496 12.2825 15.2905 11.5291 14.5372C10.305 13.4072 8.98673 11.9947 5.97349 11.9947Z" fill="url(#__inspector-grad-tailwind)"/>
+         </g>
+         <defs>
+           <linearGradient id="__inspector-grad-tailwind" x1="-0.727943" y1="9.38452" x2="20.1168" y2="21.3843" gradientUnits="userSpaceOnUse">
+             <stop stop-color="#2298BD"/>
+             <stop offset="1" stop-color="#0ED7B5"/>
+           </linearGradient>
+           <clipPath id="__inspector-clip-tailwind">
+             <rect width="24" height="24" fill="white"/>
+           </clipPath>
+         </defs>
+       </svg>`,
+    // Custom — folder.
+    'custom':
+      `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">
+         <path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4.8L11.7 7.4H19.5A1.5 1.5 0 0 1 21 8.9V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6.5z"/>
+       </svg>`,
+    // None — em-dash.
+    'none':
+      `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+         <line x1="6" y1="12" x2="18" y2="12"/>
+       </svg>`,
+  };
+
+  // Two-column grid of preset cards. The first PRIMARY_PRESETS are shown
+  // by default; PRESET_SECONDARY surfaces behind a "See more" toggle so the
+  // panel stays compact for the common case.
+  const PRESET_PRIMARY   = ['claude', 'tailwind', 'mui', 'shadcn'];
+  const PRESET_SECONDARY = ['chakra', 'mantine', 'antd', 'nextui'];
+  const PRESET_SHORT = {
+    'claude':   'Claude Design',
+    'shadcn':   'Shadcn UI',
+    'mui':      'Material UI',
+    'chakra':   'Chakra UI',
+    'mantine':  'Mantine',
+    'antd':     'Ant Design',
+    'nextui':   'NextUI',
+    'tailwind': 'Tailwind',
+    'custom':   'Custom',
+    'none':     'None',
+  };
+
+  function presetCardHtml(key) {
+    // Claude Design is the baseline — always on, can't be toggled off.
+    // Other presets layer on top: their manifest is used for detection,
+    // and Claude still picks up anything that doesn't match.
+    const isClaude = key === 'claude';
+    const checked  = isClaude || settings.preset === key;
+    const disabled = isClaude;
+    const cls = `ds-card${checked ? ' ds-card-checked' : ''}${disabled ? ' ds-card-locked' : ''}`;
+    // Two indicator styles:
+    //   - Claude (locked): a grey filled checkbox with a check, signaling
+    //     "on but you can't toggle this."
+    //   - Other presets (radio-style): empty circle when unselected,
+    //     filled blue dot when the user has picked them.
+    const indicator = isClaude
+      ? `<svg viewBox="0 0 12 12" fill="none" aria-hidden="true">
+           <rect x="1.5" y="1.5" width="9" height="9" rx="2" fill="#555"/>
+           <path d="M3.7 6.2 5.3 7.8 8.6 4.5" stroke="#1c1c1c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+         </svg>`
+      : checked
+        ? `<svg viewBox="0 0 12 12" fill="none" aria-hidden="true">
+             <circle cx="6" cy="6" r="5" fill="#3B82F6"/>
+             <circle cx="6" cy="6" r="2" fill="#fff"/>
+           </svg>`
+        : `<svg viewBox="0 0 12 12" fill="none" stroke="#555" stroke-width="1.2" aria-hidden="true">
+             <circle cx="6" cy="6" r="4.5"/>
+           </svg>`;
+    return `
+      <label class="${cls}" data-preset="${key}"${disabled ? ' aria-disabled="true" data-tip="Claude Design is always on"' : ''}>
+        <input type="checkbox" name="__inspector-preset" value="${key}" ${checked ? 'checked' : ''} ${disabled ? 'disabled' : ''}>
+        <span class="ds-card-radio" aria-hidden="true">${indicator}</span>
+        <span class="ds-card-icon" aria-hidden="true">${PRESET_ICONS[key] || ''}</span>
+        <span class="ds-card-label">${esc(PRESET_SHORT[key] || key)}</span>
+      </label>`;
+  }
+
+  function renderSettings() {
+    const panel = root.querySelector('#__inspector-panel-settings');
+    if (!panel) return;
+    const det = settings.detection || { detected: [], recommended: null };
+    const detRow = det.recommended
+      ? `<div class="settings-detect-row">
+           <strong>Detected:</strong> ${esc(PRESET_LABELS[det.recommended] || det.recommended)}
+           ${det.detected?.[0]?.confidence ? `<span class="settings-detect-conf">(${esc(det.detected[0].confidence)} confidence)</span>` : ''}
+         </div>`
+      : '';
+
+    // If the current preset is in the secondary group, expand it on render
+    // so the user can see what they have selected.
+    const expandSecondary = PRESET_SECONDARY.includes(settings.preset);
+    const primaryCards   = PRESET_PRIMARY.map(presetCardHtml).join('');
+    const secondaryCards = PRESET_SECONDARY.map(presetCardHtml).join('');
+
+    panel.innerHTML = `
+      <div class="settings-section">
+        <h3>Design system <span class="settings-beta">beta</span></h3>
+        ${detRow}
+        <div class="ds-grid">${primaryCards}</div>
+        <div class="ds-grid ds-grid-secondary ${expandSecondary ? 'open' : ''}">${secondaryCards}</div>
+        <button class="ds-see-more" type="button" data-open="${expandSecondary ? '1' : '0'}">
+          ${expandSecondary ? 'Show less' : 'See more'}
+        </button>
+        ${settings.preset === 'custom'
+          ? `<div class="ds-import ds-import-loaded" aria-label="Custom design system loaded">
+               <span class="ds-import-check" aria-hidden="true">
+                 <svg viewBox="0 0 12 12" fill="none">
+                   <rect x="1.5" y="1.5" width="9" height="9" rx="2" fill="#3B82F6"/>
+                   <path d="M3.7 6.2 5.3 7.8 8.6 4.5" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                 </svg>
+               </span>
+               <span class="ds-import-icon" aria-hidden="true">
+                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                   <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/>
+                 </svg>
+               </span>
+               <span class="ds-import-label">${esc(settings.customLabel || 'Custom design system')}</span>
+               <span class="ds-import-meta">${(settings.manifest?.components?.length || 0)} components loaded</span>
+             </div>`
+          : `<button class="ds-import" type="button" disabled aria-disabled="true" data-tip="Coming soon">
+               <span class="ds-import-icon" aria-hidden="true">
+                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                   <path d="M12 4v12"/>
+                   <path d="m6 10 6 6 6-6"/>
+                   <path d="M5 20h14"/>
+                 </svg>
+               </span>
+               <span class="ds-import-label">Import Custom design system</span>
+               <span class="ds-import-soon">Coming soon</span>
+             </button>`}
+        <div class="settings-foot">
+          Pick your design system to edit components and variants directly. <strong>Claude Design</strong> asks Claude to identify each pick instead.
+        </div>
+      </div>
+      <div class="settings-section">
+        <h3>Picker <span class="settings-beta">beta</span></h3>
+        <label class="settings-toggle" data-settings-check="multi">
+          <div class="inspector-check-box${settings.multiSelect ? ' on' : ''}">
+            <svg viewBox="0 0 10 10" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 3.5,7.5 8.5,2"/></svg>
+          </div>
+          <span>
+            <strong>Multi-select picker</strong>
+            <span class="settings-sub">Pick several elements at once. Variant changes and conversions apply to all picks together. When off, the multi-select button is hidden from the header.</span>
+          </span>
+        </label>
+      </div>
+      <div class="settings-section">
+        <h3>Ask Claude <span class="settings-beta">beta</span></h3>
+        <label class="settings-toggle" data-settings-check="ask">
+          <div class="inspector-check-box${settings.askClaudeFallback ? ' on' : ''}">
+            <svg viewBox="0 0 10 10" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 3.5,7.5 8.5,2"/></svg>
+          </div>
+          <span>
+            <strong>"Ask Claude" fallback</strong>
+            <span class="settings-sub">Show an "Ask Claude what this could be" button in the Component section when the picked element doesn't match any manifest entry. Clicking it copies a chat-ready intro with the element's selector, tag, and classes — paste it back to Claude to get identification + variant suggestions.</span>
+          </span>
+        </label>
+      </div>
+    `;
+
+    // Claude Design is permanently on (baseline). Picking another card
+    // layers its manifest on top; clicking the already-selected card
+    // returns to the Claude-only baseline. The Claude card itself is
+    // disabled at the DOM level, so its change events never fire.
+    panel.querySelectorAll('input[name="__inspector-preset"]').forEach(r => {
+      r.addEventListener('change', (e) => {
+        const value  = e.target.value;
+        const wasSel = settings.preset === value;
+        saveSettings({ preset: wasSel ? 'claude' : value });
+        renderSettings();
+        renderDesignPanel();
+      });
+    });
+    panel.querySelector('.ds-see-more')?.addEventListener('click', (e) => {
+      const grid = panel.querySelector('.ds-grid-secondary');
+      const isOpen = grid.classList.toggle('open');
+      e.target.dataset.open = isOpen ? '1' : '0';
+      e.target.textContent = isOpen ? 'Show less' : 'See more';
+    });
+    // Settings checkboxes now use the Design-tab .inspector-check-box
+    // widget. The click handler lives on the wrapping <label>, toggles
+    // the .on class, saves the setting, and runs the same side effects.
+    panel.querySelectorAll('.settings-toggle[data-settings-check]').forEach(label => {
+      label.addEventListener('click', (e) => {
+        // Don't intercept clicks on links / inner buttons (none today, future-proof).
+        if (e.target.closest && e.target.closest('a,button')) return;
+        e.preventDefault();
+        const which = label.dataset.settingsCheck;
+        const box = label.querySelector('.inspector-check-box');
+        const on = !box.classList.contains('on');
+        box.classList.toggle('on', on);
+        if (which === 'multi') {
+          saveSettings({ multiSelect: on });
+          applyMultiSelectVisibility();
+          // If the user disables multi-select while in multi-pick mode,
+          // collapse the extras and exit multi-mode for consistency.
+          if (!settings.multiSelect && multiPickMode) setMultiPickMode(false);
+        } else if (which === 'ask') {
+          saveSettings({ askClaudeFallback: on });
+          renderDesignPanel();
+        }
+      });
+    });
+    // Import Custom design system is disabled for now (coming-soon state),
+    // so no click handler is attached.
+  }
+
+  // Show/hide the header multi-select button based on the current setting.
+  // Called on boot and whenever the toggle changes.
+  function applyMultiSelectVisibility() {
+    const btn = root.querySelector('#__inspector-multi-btn');
+    if (btn) btn.style.display = settings.multiSelect ? '' : 'none';
   }
 
   function renderAbout() {
@@ -1134,10 +2490,14 @@
   });
 
   root.querySelector('#__inspector-close').addEventListener('click', () => {
+    targetDoc.querySelectorAll('.__inspector-selected-highlight').forEach(n =>
+      n.classList.remove('__inspector-selected-highlight')
+    );
     root.remove();
     tooltip.remove();
     styleEl.remove();
     if (targetStyleEl) targetStyleEl.remove();
+    if (liveChangesStyleEl) liveChangesStyleEl.remove();
     exitPickMode();
   });
 
@@ -1157,6 +2517,112 @@
   });
 
   root.querySelector('#__inspector-pick-btn').addEventListener('click', togglePickMode);
+  // The whole select-group acts as the pick affordance — clicks on its
+  // padding/gap (anywhere not on another interactive child) trigger
+  // pick mode just like clicking the cursor button itself.
+  root.querySelector('#__inspector-select-group')?.addEventListener('click', (e) => {
+    if (e.target.closest('button') || e.target.closest('[contenteditable]')) return;
+    togglePickMode();
+  });
+  root.querySelector('#__inspector-multi-btn')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setMultiPickMode(!multiPickMode);
+    // Turning multi-pick ON auto-enters pick mode so the user can start
+    // accumulating immediately; turning OFF leaves any current single pick
+    // intact and exits pick mode.
+    if (multiPickMode && !pickMode) enterPickMode();
+  });
+  // Hide the multi-select button from the header when the feature is off
+  // in settings (default). Users opt in via Settings → Picker.
+  applyMultiSelectVisibility();
+  // Esc cascade — handle the most-recent-mode first:
+  //   1. Mid-drag → handled by onDragKey (separate listener).
+  //   2. Multi-pick active → exit multi-pick (keep primary selection).
+  //   3. Pick mode active → exit pick mode (no selection).
+  //   4. Something selected → clear the selection.
+  // Skip entirely if focus is in an editable field (let the input handle it).
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (dragState) return;
+    if (isEditableTarget && isEditableTarget(document.activeElement)) return;
+    if (multiPickMode) { setMultiPickMode(false); return; }
+    if (pickMode) { exitPickMode(); return; }
+    if (selectedElement) { clearSelection(); }
+  });
+
+  // Arrow keys reorder the selected element among its siblings.
+  // Axis is inferred from the parent's layout: vertical contexts use
+  // Up/Down, horizontal contexts use Left/Right. No modifier needed
+  // (Figma parity). Blocked when focus is in an editable field, when
+  // multi-pick is active, or for absolutely-positioned elements.
+  function isEditableTarget(t) {
+    if (!t) return false;
+    if (t.isContentEditable) return true;
+    const tag = t.tagName;
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+  }
+  function handleArrowKey(e) {
+    if (!selectedElement) return;
+    if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+    if (isEditableTarget(e.target)) return;
+    if (isEditableTarget(document.activeElement)) return;
+    if (targetDoc && isEditableTarget(targetDoc.activeElement)) return;
+
+    // Use armedLevel if cursor-exit promotion is active, else fall
+    // back to the selected element itself.
+    const target = (armedLevel && armedLevel.element) || selectedElement;
+    const parent = target.parentNode;
+    if (!parent) return;
+    const axis = (armedLevel && armedLevel.axis) || inferAxis(parent);
+    let dir = 0;
+    if (axis === 'vertical' && e.key === 'ArrowUp')    dir = -1;
+    else if (axis === 'vertical' && e.key === 'ArrowDown')  dir = 1;
+    else if (axis === 'horizontal' && e.key === 'ArrowLeft')  dir = -1;
+    else if (axis === 'horizontal' && e.key === 'ArrowRight') dir = 1;
+    else return;
+
+    e.preventDefault();
+    reorderAmongSiblings(target, dir);
+    renderArmedIndicator(); // reposition after move
+  }
+  document.addEventListener('keydown', handleArrowKey);
+  if (targetDoc && targetDoc !== document) {
+    targetDoc.addEventListener('keydown', handleArrowKey);
+  }
+
+  // Track cursor for armed-level promotion. Listen on both parent
+  // and iframe so the user's hover anywhere updates the state.
+  //
+  // Coordinate system: we normalize everything to TARGET-DOC LOCAL
+  // coords (i.e. iframe-relative when the target is in an iframe).
+  // That's where `getBoundingClientRect()` lives for picked elements,
+  // so insideX/Y checks line up correctly. Overlays drawn in the
+  // parent doc translate back via `iframeOffset()` at render time.
+  function iframeOffset() {
+    if (targetWin === window || !targetWin.frameElement) return { dx: 0, dy: 0 };
+    const fr = targetWin.frameElement.getBoundingClientRect();
+    return { dx: fr.left, dy: fr.top };
+  }
+  function onCursorMove(e) {
+    let cx = e.clientX, cy = e.clientY;
+    if (e.view === window && targetWin !== window && targetWin.frameElement) {
+      // Event fired in the parent doc — subtract iframe offset to
+      // map cursor into the iframe's local coordinate space.
+      const { dx, dy } = iframeOffset();
+      cx -= dx; cy -= dy;
+    }
+    // From iframe events: already iframe-local.
+    updateArmedLevel(cx, cy);
+    updateSelectionHover(cx, cy);
+  }
+  document.addEventListener('mousemove', onCursorMove);
+  if (targetDoc && targetDoc !== document) {
+    targetDoc.addEventListener('mousemove', onCursorMove);
+  }
+  // Reposition armed indicator + FABs + selection overlays on scroll /
+  // resize so they track the live element bounds.
+  document.addEventListener('scroll', () => { renderArmedIndicator(); positionFabs(); repositionSelectionOverlays(); }, true);
+  window.addEventListener('resize', () => { renderArmedIndicator(); positionFabs(); repositionSelectionOverlays(); });
   root.querySelector('#__inspector-deselect').addEventListener('click', (e) => {
     e.stopPropagation();
     clearSelection();
@@ -1259,9 +2725,35 @@
 
     const sel = computeSelector(selectedElement);
     const kind = elementKind(selectedElement);
+    // Top-of-popup action: copy a chat-ready intro to the clipboard.
+    // Clipboard icon + text, styled as a link button. Used to live in the
+    // header next to the selector pill; moved here so the header just
+    // carries Clear (✕). Tooltip explains the handoff.
+    const copyBtnHtml =
+      `<button class="tree-copy-btn" id="__inspector-tree-copy" type="button"
+               data-tip="Paste into Claude, then type your ask — Claude will know the selected ${kind} is ${sel}.">
+         <svg class="tree-copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+           <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+           <rect x="8" y="2.5" width="8" height="4" rx="1" fill="currentColor" stroke="none"/>
+         </svg>
+         <span>Copy chat-ready intro</span>
+       </button>`;
     treePopup.innerHTML =
+      copyBtnHtml +
       html +
-      `<div class="tree-hint">Tip: click the <span class="tree-hint-key">📋 copy icon</span> next to <span class="tree-hint-sel">${sel}</span> in the header to paste a chat-ready intro — Claude will then know the selected ${kind} is <span class="tree-hint-sel">${sel}</span>.</div>`;
+      `<div class="tree-hint">Tip: this puts <span class="tree-hint-sel">${esc(sel)}</span> on your clipboard as a chat intro. Paste it back to Claude, then type your ask.</div>`;
+    const copyBtn = treePopup.querySelector('#__inspector-tree-copy');
+    copyBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      copySelectionIntro(copyBtn);
+    });
+    // First-pick pulse — runs once per session the first time the popup
+    // renders after a selection so users notice the chat-handoff link.
+    if (hasShownCopyHint && copyBtn && !copyBtn.dataset._pulsed) {
+      copyBtn.dataset._pulsed = '1';
+      copyBtn.classList.add('first-hint');
+      setTimeout(() => copyBtn.classList.remove('first-hint'), 3200);
+    }
 
     const allEls = [...ancestors, selectedElement, ...siblings];
     treePopup.querySelectorAll('.tree-row').forEach((row) => {
@@ -1281,50 +2773,18 @@
       }
     });
 
-    // Measure actual height by briefly rendering off-screen
-    treePopup.style.visibility = 'hidden';
-    treePopup.style.top = '-9999px';
-    treePopup.style.left = '-9999px';
+    // Remember how this popup was opened so it can reposition itself when
+    // the inspector panel is dragged or the viewport scrolls/resizes.
+    treePopup._anchorEl = anchorEl || null;
     treePopup.classList.add('visible');
-    const actualH = Math.min(treePopup.scrollHeight, window.innerHeight - 24);
-    treePopup.classList.remove('visible');
-    treePopup.style.visibility = '';
-
-    let top, left;
-    if (anchorEl) {
-      const rect = anchorEl.getBoundingClientRect();
-      left = rect.left;
-      const spaceBelow = window.innerHeight - rect.bottom - 8;
-      const spaceAbove = rect.top - 8;
-      // Open in whichever direction has more room, not just "below if it fits".
-      if (spaceBelow >= spaceAbove) {
-        top = rect.bottom + 4;
-      } else {
-        top = rect.top - Math.min(actualH, spaceAbove) - 4;
-      }
-    } else {
-      left = treePopup._posX || 100;
-      top = treePopup._posY || 100;
-      // If would overflow bottom, flip up
-      if (top + actualH > window.innerHeight - 8) {
-        top = (treePopup._posY || 100) - actualH - 8;
-      }
-    }
-    left = Math.max(4, Math.min(window.innerWidth - 276, left));
-    top = Math.max(4, Math.min(window.innerHeight - 12, top));
-    // Inline max-height that respects the actual position — so the popup
-    // self-scrolls instead of overflowing past the viewport bottom.
-    const availableBelow = window.innerHeight - top - 4;
-    treePopup.style.maxHeight = availableBelow + 'px';
-    treePopup.style.left = left + 'px';
-    treePopup.style.top = top + 'px';
-    treePopup.classList.add('visible');
+    positionTreePopup();
 
     setTimeout(() => document.addEventListener('click', treeOutsideClick), 0);
   }
 
   function closeTreePopup() {
     treePopup.classList.remove('visible');
+    treePopup._anchorEl = null;
     document.removeEventListener('click', treeOutsideClick);
   }
 
@@ -1333,6 +2793,45 @@
       closeTreePopup();
     }
   }
+
+  // Reposition the tree popup against its current anchor (selector pill, or
+  // a stored cursor position from a right-click). Called on open, on
+  // inspector-panel drag, and on viewport scroll/resize so the popup tracks
+  // its source and never lands off-screen.
+  function positionTreePopup() {
+    if (!treePopup.classList.contains('visible')) return;
+    // Minimum gap (in px) between the popup and any viewport edge.
+    const SAFE = 30;
+    // Temporarily clear max-height so we can measure the popup's natural
+    // size; then re-apply a max-height based on the chosen position.
+    treePopup.style.maxHeight = '';
+    const actualH = Math.min(treePopup.scrollHeight, window.innerHeight - 2 * SAFE);
+    const actualW = Math.min(treePopup.offsetWidth,  window.innerWidth  - 2 * SAFE);
+    let top, left;
+    if (treePopup._anchorEl) {
+      const rect = treePopup._anchorEl.getBoundingClientRect();
+      left = rect.left;
+      const spaceBelow = window.innerHeight - rect.bottom - 8;
+      const spaceAbove = rect.top - 8;
+      top = (spaceBelow >= spaceAbove)
+        ? rect.bottom + 4
+        : rect.top - Math.min(actualH, spaceAbove) - 4;
+    } else {
+      left = treePopup._posX || 100;
+      top  = treePopup._posY || 100;
+      if (top + actualH > window.innerHeight - 8) {
+        top = (treePopup._posY || 100) - actualH - 8;
+      }
+    }
+    // Hard clamp against the measured popup box so it stays fully on-screen.
+    left = Math.max(SAFE, Math.min(window.innerWidth  - actualW - SAFE, left));
+    top  = Math.max(SAFE, Math.min(window.innerHeight - actualH - SAFE, top));
+    treePopup.style.left = left + 'px';
+    treePopup.style.top  = top  + 'px';
+    treePopup.style.maxHeight = (window.innerHeight - top - SAFE) + 'px';
+  }
+  window.addEventListener('scroll', positionTreePopup, true);
+  window.addEventListener('resize', positionTreePopup);
 
   function treeSelectElement(el) {
     el.style.outline = '';
@@ -1572,6 +3071,11 @@
 
     header.addEventListener('mousedown', (e) => {
       if (e.target.closest('button') || e.target.closest('[contenteditable]')) return;
+      // Don't start a drag from any click inside the blue Select group —
+      // the whole inner area acts as the pick affordance, not as a drag
+      // handle. Clicks on dead space (padding/gap) route to the pick
+      // button via the click handler below.
+      if (e.target.closest('#__inspector-select-group')) return;
       e.preventDefault();
       const rect = root.getBoundingClientRect();
       root.style.right = 'auto';
@@ -1594,6 +3098,9 @@
       const newTop = Math.max(0, Math.min(window.innerHeight - 40, startTop + dy));
       root.style.left = newLeft + 'px';
       root.style.top = newTop + 'px';
+      // Tree popup is anchored to the selector pill in the inspector — it
+      // needs to track the panel as it moves.
+      positionTreePopup();
     }
 
     function onDragUp() {
@@ -1659,33 +3166,44 @@
     const existing = changes.findIndex(c => c.selector === selector && c.property === property);
     const originalFrom = existing >= 0 ? changes[existing].from : from;
 
-    if (to === originalFrom) {
-      if (existing >= 0) changes.splice(existing, 1);
-      redoStack.length = 0;
-      syncBadge();
-      syncModifiedIndicators();
-      return;
-    }
-
     redoStack.length = 0;   // clear redo on any new edit
-    if (existing >= 0) {
+
+    if (to === originalFrom) {
+      // Toggle back to the original value — remove the change and
+      // record the removal so undo can restore it.
+      if (existing >= 0) {
+        const removed = changes.splice(existing, 1)[0];
+        history.push({ kind: 'css-remove', prev: { ...removed } });
+      }
+    } else if (existing >= 0) {
+      const prev = { ...changes[existing] };
       changes[existing].to = to;
+      history.push({ kind: 'css-update', prev, next: { ...changes[existing] } });
     } else {
-      changes.push({ selector, property, from, to, file, line });
+      const next = { selector, property, from, to, file, line };
+      changes.push(next);
+      history.push({ kind: 'css-add', next: { ...next } });
     }
     syncBadge();
     syncModifiedIndicators();
+    rebuildLiveChangesStyles();
   }
   function undoChange(index) {
-    changes.splice(index, 1);
+    const removed = changes.splice(index, 1)[0];
+    if (removed) {
+      history.push({ kind: 'css-remove', prev: { ...removed } });
+      redoStack.length = 0;
+    }
+    clearInlineForChange(removed);
     syncBadge();
     syncModifiedIndicators();
+    rebuildLiveChangesStyles();
   }
 
   function syncBadge() {
     const undoBtn = root.querySelector('#__inspector-undo');
     const redoBtn = root.querySelector('#__inspector-redo');
-    if (undoBtn) undoBtn.disabled = changes.length === 0;
+    if (undoBtn) undoBtn.disabled = history.length === 0;
     if (redoBtn) redoBtn.disabled = redoStack.length === 0;
     renderChangesBar();
   }
@@ -1720,44 +3238,960 @@
     const input = panel?.querySelector(`input[data-prop="${prop}"]`);
     if (input) input.value = parseFloat(originalValue) || originalValue;
     const idx = changes.findIndex(c => c.selector === sel && c.property === prop);
-    if (idx >= 0) changes.splice(idx, 1);
-    syncBadge();
-    syncModifiedIndicators();
-  }
-
-  function undoLast() {
-    if (changes.length === 0) return;
-    const last = changes.pop();
-    redoStack.push(last);
-    if (selectedElement) {
-      selectedElement.style.removeProperty(last.property);
+    if (idx >= 0) {
+      const removed = changes.splice(idx, 1)[0];
+      history.push({ kind: 'css-remove', prev: { ...removed } });
+      redoStack.length = 0;
     }
     syncBadge();
     syncModifiedIndicators();
+    rebuildLiveChangesStyles();
+  }
+
+  function undoLast() {
+    if (history.length === 0) return;
+    const h = history.pop();
+    redoStack.push(h);
+
+    if (h.kind === 'css-add') {
+      // Reverse a CSS add: locate the live entry by selector+property and remove it.
+      const idx = changes.findIndex(c => c.selector === h.next.selector && c.property === h.next.property);
+      if (idx >= 0) {
+        const removed = changes.splice(idx, 1)[0];
+        // Inline style lives on whichever element was picked at edit time.
+        // Clear from every matching element so orphaned inlines don't beat
+        // the class-scope stylesheet revert. Harmless on elements without
+        // the inline property.
+        clearInlineForChange(removed);
+      }
+    } else if (h.kind === 'css-update') {
+      const idx = changes.findIndex(c => c.selector === h.next.selector && c.property === h.next.property);
+      if (idx >= 0) {
+        clearInlineForChange(changes[idx]);
+        changes[idx] = { ...h.prev };
+      }
+    } else if (h.kind === 'css-remove') {
+      // Restore a removed change.
+      changes.push({ ...h.prev });
+    } else if (h.kind === 'intent-add') {
+      const idx = componentIntents.findIndex(i => sameIntentTarget(i, h.next));
+      if (idx >= 0) componentIntents.splice(idx, 1);
+      revertSwapDom(h.dom);
+    } else if (h.kind === 'intent-update') {
+      const idx = componentIntents.findIndex(i => sameIntentTarget(i, h.next));
+      if (idx >= 0) componentIntents[idx] = h.prev;
+      revertSwapDom(h.dom);
+    } else if (h.kind === 'intent-remove') {
+      // X-removal didn't touch the DOM, so undo only restores
+      // the bookkeeping entry — no class swap to replay.
+      componentIntents.push(h.prev);
+    } else if (h.kind === 'reorder') {
+      revertReorder(h);
+    }
+
+    syncBadge();
+    syncModifiedIndicators();
+    // Class-scope live stylesheet must rebuild so popped CSS rules
+    // no longer apply to sibling instances.
+    rebuildLiveChangesStyles();
+    // If a variant swap reverted, the design panel's dropdowns need
+    // to re-detect against the now-current classes.
+    if (selectedElement && (h.kind === 'intent-add' || h.kind === 'intent-update')) {
+      renderDesignPanel();
+    }
+    // If a reorder reverted, the selected element may have moved.
+    if (h.kind === 'reorder') {
+      repositionSelectionOverlays();
+      positionFabs();
+    }
+  }
+
+  // Reverse the live class swap that produced a variant intent — used
+  // by undo on intent-add / intent-update history entries. The element
+  // reference is kept on the history entry so we revert the SAME node
+  // that was originally mutated, regardless of current selection.
+  function revertSwapDom(dom) {
+    if (!dom || !dom.element) return;
+    if (dom.toCls && dom.element.classList.contains(dom.toCls)) {
+      dom.element.classList.remove(dom.toCls);
+    }
+    if (dom.fromCls) dom.element.classList.add(dom.fromCls);
+  }
+  function reapplySwapDom(dom) {
+    if (!dom || !dom.element) return;
+    if (dom.fromCls && dom.element.classList.contains(dom.fromCls)) {
+      dom.element.classList.remove(dom.fromCls);
+    }
+    if (dom.toCls) dom.element.classList.add(dom.toCls);
+  }
+
+  // ── Sibling reorder (Phase 2 — arrow-key version) ─────────────
+  // Determines whether `parent` lays its children out horizontally
+  // or vertically. Decides which arrow keys reorder the selected
+  // child + which ancestor levels qualify for cursor-exit promotion.
+  //
+  // For flex containers we trust flex-direction (most reliable). For
+  // anything else — block, grid, table, inline-flow — we MEASURE the
+  // children's actual positions: if their X spread is bigger than their
+  // Y spread, the layout is horizontal. This handles grid-based row
+  // layouts (common for tables and dashboards) where the CSS display
+  // value alone doesn't tell you the axis.
+  function measureChildAxis(parent) {
+    const kids = Array.from(parent.children);
+    if (kids.length < 2) return 'vertical';
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const k of kids) {
+      const r = k.getBoundingClientRect();
+      minX = Math.min(minX, r.left); maxX = Math.max(maxX, r.left);
+      minY = Math.min(minY, r.top);  maxY = Math.max(maxY, r.top);
+    }
+    return (maxX - minX) > (maxY - minY) ? 'horizontal' : 'vertical';
+  }
+
+  function inferAxis(parent) {
+    if (!parent || !targetWin) return 'vertical';
+    const cs = targetWin.getComputedStyle(parent);
+    const display = cs.display || '';
+    if (display.includes('flex') && !display.includes('inline')) {
+      return (cs.flexDirection || 'row').startsWith('row') ? 'horizontal' : 'vertical';
+    }
+    // Grid / block / inline / table — measure the actual layout.
+    return measureChildAxis(parent);
+  }
+
+  // Move `el` one slot earlier (dir=-1) or later (dir=+1) among its
+  // element siblings. Pushes a `reorder` history entry. Returns true
+  // if the move happened, false if blocked (no parent, edge of list,
+  // multi-pick active, abs-positioned). Pure DOM tree op — no class
+  // mutations, no inline styles.
+  function reorderAmongSiblings(el, dir) {
+    if (!el || !el.parentNode || !targetWin) return false;
+    if (multiPickMode) return false;
+    const cs = targetWin.getComputedStyle(el);
+    if (cs.position === 'absolute' || cs.position === 'fixed') return false;
+
+    const parent = el.parentNode;
+    const siblings = Array.from(parent.children);
+    const fromIdx = siblings.indexOf(el);
+    if (fromIdx < 0) return false;
+    const toIdx = fromIdx + dir;
+    if (toIdx < 0 || toIdx >= siblings.length) return false;
+
+    const parentSelector = computeSelector(parent);
+    const cleanClasses = (cls) => (cls || '').split(/\s+/)
+      .filter(c => c && !c.startsWith('__inspector-'))
+      .join(' ');
+    const child = {
+      text: (el.textContent || '').trim().slice(0, 80),
+      classes: cleanClasses(el.className),
+    };
+    const siblingsSnapshot = siblings.map(s => ({
+      text: (s.textContent || '').trim().slice(0, 80),
+      classes: cleanClasses(s.className),
+    }));
+
+    const targetSib = siblings[toIdx];
+    if (dir < 0) {
+      parent.insertBefore(el, targetSib);
+    } else {
+      parent.insertBefore(el, targetSib.nextElementSibling);
+    }
+
+    redoStack.length = 0;
+    history.push({
+      kind: 'reorder',
+      parent: parentSelector,
+      from: fromIdx,
+      to: toIdx,
+      child,
+      siblingsSnapshot,
+      dom: { element: el, parent },
+    });
+    syncBadge();
+    repositionSelectionOverlays();
+    positionFabs();
+    return true;
+  }
+
+  // Move the recorded element back to its `from` index. Robust to
+  // intermediate DOM mutations — we compute the target sibling from
+  // the live other-children list rather than trusting cached refs.
+  function revertReorder(h) {
+    const dom = h && h.dom;
+    if (!dom || !dom.element || !dom.parent) return;
+    const el = dom.element;
+    const par = dom.parent;
+    if (el.parentNode !== par) return;
+    const others = Array.from(par.children).filter(c => c !== el);
+    par.insertBefore(el, others[h.from] || null);
+  }
+  function reapplyReorder(h) {
+    const dom = h && h.dom;
+    if (!dom || !dom.element || !dom.parent) return;
+    const el = dom.element;
+    const par = dom.parent;
+    if (el.parentNode !== par) return;
+    const others = Array.from(par.children).filter(c => c !== el);
+    par.insertBefore(el, others[h.to] || null);
+  }
+
+  // ── Armed level (cursor-exit promotion) ───────────────────────
+  // The "armed level" is the element that arrow keys / drag handles
+  // currently act on. When the cursor is inside (or hasn't moved
+  // since selection), the armed level IS selectedElement. When the
+  // cursor exits selected, we walk up the ancestor chain looking
+  // for the first ancestor whose layout axis matches the exit
+  // direction AND has ≥2 children — and arm THAT level's child
+  // that contains selectedElement. This lets the user nudge the
+  // selected card itself among ITS siblings, not just its children.
+  let armedLevel = null; // { element, axis } or null
+
+  function inferExitAxis(cursorX, cursorY, rect) {
+    const insideX = cursorX >= rect.left && cursorX <= rect.right;
+    const insideY = cursorY >= rect.top && cursorY <= rect.bottom;
+    if (insideX && insideY) return null;
+    if (insideX) return 'vertical';
+    if (insideY) return 'horizontal';
+    const dx = cursorX < rect.left ? rect.left - cursorX : cursorX - rect.right;
+    const dy = cursorY < rect.top  ? rect.top  - cursorY : cursorY - rect.bottom;
+    return dx > dy ? 'horizontal' : 'vertical';
+  }
+
+  function walkUpForAxis(el, axis) {
+    // Returns the highest reachable direct-child node whose parent's
+    // layout matches `axis` AND has ≥2 children. Null if none found
+    // before reaching <body>.
+    let node = el;
+    const stopAt = targetDoc.body || targetDoc.documentElement;
+    while (node && node.parentNode && node.parentNode !== stopAt) {
+      const par = node.parentNode;
+      if (par.children.length >= 2 && inferAxis(par) === axis) {
+        return node;
+      }
+      node = par;
+    }
+    return null;
+  }
+
+  function updateArmedLevel(cursorX, cursorY) {
+    if (dragState) return;  // freeze armed level while a drag is in progress
+    if (!selectedElement) { armedLevel = null; renderArmedIndicator(); return; }
+    const rect = selectedElement.getBoundingClientRect();
+    const insideX = cursorX >= rect.left && cursorX <= rect.right;
+    const insideY = cursorY >= rect.top && cursorY <= rect.bottom;
+    if (insideX && insideY) {
+      armedLevel = { element: selectedElement, axis: inferAxis(selectedElement.parentNode) };
+    } else {
+      const axis = inferExitAxis(cursorX, cursorY, rect);
+      const promoted = axis ? walkUpForAxis(selectedElement, axis) : null;
+      armedLevel = promoted
+        ? { element: promoted, axis }
+        : { element: selectedElement, axis: inferAxis(selectedElement.parentNode) };
+    }
+    renderArmedIndicator();
+  }
+
+  // Subtle pink outline on the armed element when it's not the
+  // currently selected one — gives visual feedback for promotion.
+  let armedIndicator = null;
+  function ensureArmedIndicator() {
+    if (armedIndicator) return armedIndicator;
+    armedIndicator = document.createElement('div');
+    armedIndicator.id = '__inspector-armed-indicator';
+    armedIndicator.style.cssText = 'position:fixed;pointer-events:none;border:1px solid #ff3d8b;z-index:2147483642;display:none;';
+    document.body.appendChild(armedIndicator);
+    return armedIndicator;
+  }
+
+  // Two kinds of overlay markup per armed level:
+  //   - CIRCLE grippers, one per sibling, centered on the child. THESE are
+  //     the actual grab handles — mousedown here starts a drag of that child.
+  //   - Subtle BARS in the gaps between siblings — purely decorative gap
+  //     indicators (no interaction; pointer-events: none). Future feature
+  //     will repurpose them as gap-size handles (Figma-style auto-layout gap).
+  // Live in parent doc so they don't pollute the target source.
+  let grippers = [];
+  let gapBars = [];
+  // Tracks what's currently rendered, so renderArmedIndicator can skip
+  // tearing down + recreating gripper DOM on every mousemove. Without
+  // this guard, the `:hover` state on a gripper resets the moment the
+  // cursor jiggles (because the hovered element gets replaced with a
+  // fresh one), causing the visible disc to flicker between sizes.
+  let renderedArmedElement = null;
+  let renderedArmedAxis = null;
+  let renderedSiblingCount = 0;
+  function clearGrippers() {
+    grippers.forEach(g => g.remove()); grippers = [];
+    gapBars.forEach(g => g.remove());  gapBars = [];
+    renderedArmedElement = null;
+    renderedArmedAxis = null;
+    renderedSiblingCount = 0;
+  }
+  function renderGrippers() {
+    if (!armedLevel || !armedLevel.element || !armedLevel.element.parentNode) {
+      clearGrippers();
+      return;
+    }
+    if (dragState) {
+      clearGrippers();
+      return;
+    }
+    const parent = armedLevel.element.parentNode;
+    const siblings = Array.from(parent.children);
+    if (siblings.length < 2) {
+      clearGrippers();
+      return;
+    }
+    const axis = armedLevel.axis;
+    const { dx, dy } = iframeOffset();
+
+    // FAST PATH: the armed level + sibling count match the last full
+    // render. Just reposition the existing grippers in place — no DOM
+    // teardown, so the cursor's `:hover` state is preserved across
+    // every mousemove. This is what kept the hover flickering before.
+    if (renderedArmedElement === armedLevel.element &&
+        renderedArmedAxis === axis &&
+        renderedSiblingCount === siblings.length &&
+        grippers.length === siblings.length) {
+      siblings.forEach((sib, i) => {
+        const r = sib.getBoundingClientRect();
+        const midX = (r.left + r.right) / 2 + dx;
+        const midY = (r.top + r.bottom) / 2 + dy;
+        grippers[i].style.left = (midX - 8.5) + 'px';
+        grippers[i].style.top  = (midY - 8.5) + 'px';
+      });
+      // Reposition bars (some may have been skipped due to wrapping,
+      // so iterate through gapBars in parallel with valid sibling pairs).
+      let barIdx = 0;
+      for (let i = 0; i < siblings.length - 1; i++) {
+        const a = siblings[i].getBoundingClientRect();
+        const b = siblings[i + 1].getBoundingClientRect();
+        const perpOverlap = axis === 'vertical'
+          ? Math.min(a.right, b.right) > Math.max(a.left, b.left)
+          : Math.min(a.bottom, b.bottom) > Math.max(a.top, b.top);
+        if (!perpOverlap) continue;
+        const bar = gapBars[barIdx++];
+        if (!bar) continue;
+        if (axis === 'vertical') {
+          const midY = (a.bottom + b.top) / 2 + dy;
+          const midX = (Math.min(a.left, b.left) + Math.max(a.right, b.right)) / 2 + dx;
+          bar.style.left = (midX - 9) + 'px';
+          bar.style.top  = (midY - 0.75) + 'px';
+        } else {
+          const midX = (a.right + b.left) / 2 + dx;
+          const midY = (Math.min(a.top, b.top) + Math.max(a.bottom, b.bottom)) / 2 + dy;
+          bar.style.left = (midX - 0.75) + 'px';
+          bar.style.top  = (midY - 6.75) + 'px';
+        }
+      }
+      return;
+    }
+
+    // SLOW PATH: armed level changed → tear down and rebuild.
+    clearGrippers();
+    renderedArmedElement = armedLevel.element;
+    renderedArmedAxis = axis;
+    renderedSiblingCount = siblings.length;
+
+    // Circle grippers — the grab handles. Visual styles come from the
+    // `.__inspector-gripper` CSS class (hollow pink ring stack, scales
+    // on hover). Only position is inlined here. Box is 7×7 so offset
+    // is 3.5px from the sibling's center.
+    siblings.forEach((sib, i) => {
+      const r = sib.getBoundingClientRect();
+      const midX = (r.left + r.right) / 2 + dx;
+      const midY = (r.top + r.bottom) / 2 + dy;
+      const g = document.createElement('div');
+      g.className = '__inspector-gripper';
+      g.dataset.siblingIndex = String(i);
+      g.style.left = (midX - 8.5) + 'px';   // -half of 17px hit pad
+      g.style.top  = (midY - 8.5) + 'px';
+      g.addEventListener('mousedown', (e) => startGripperDrag(e, sib, parent, axis));
+      document.body.appendChild(g);
+      grippers.push(g);
+    });
+
+    // Decorative gap bars — between adjacent siblings only. Skip the
+    // bar if two consecutive siblings are NOT visually adjacent on the
+    // perpendicular axis (i.e., a flex/grid container wrapped to a new
+    // line). Otherwise we'd draw a diagonal "ghost" bar in mid-air.
+    for (let i = 0; i < siblings.length - 1; i++) {
+      const a = siblings[i].getBoundingClientRect();
+      const b = siblings[i + 1].getBoundingClientRect();
+      const perpOverlap = axis === 'vertical'
+        ? Math.min(a.right, b.right) > Math.max(a.left, b.left)
+        : Math.min(a.bottom, b.bottom) > Math.max(a.top, b.top);
+      if (!perpOverlap) continue;
+      const bar = document.createElement('div');
+      bar.className = '__inspector-gap-bar';
+      if (axis === 'vertical') {
+        // Horizontal gap bar: 18px long (was 24, trimmed to 75%).
+        const midY = (a.bottom + b.top) / 2 + dy;
+        const midX = (Math.min(a.left, b.left) + Math.max(a.right, b.right)) / 2 + dx;
+        bar.style.left = (midX - 9) + 'px';
+        bar.style.top  = (midY - 0.75) + 'px';
+        bar.style.width = '18px';
+        bar.style.height = '1.5px';
+      } else {
+        // Vertical gap bar: 13.5px tall (was 18, trimmed to 75%).
+        const midX = (a.right + b.left) / 2 + dx;
+        const midY = (Math.min(a.top, b.top) + Math.max(a.bottom, b.bottom)) / 2 + dy;
+        bar.style.left = (midX - 0.75) + 'px';
+        bar.style.top  = (midY - 6.75) + 'px';
+        bar.style.width = '1.5px';
+        bar.style.height = '13.5px';
+      }
+      document.body.appendChild(bar);
+      gapBars.push(bar);
+    }
+  }
+
+  // ── Drag-and-drop ────────────────────────────────────────────
+  // Drag state lives in module-scope vars so the global move/up
+  // handlers can read it. Ghost = absolute-positioned clone that
+  // follows the cursor; drop line = a thin pink bar showing where
+  // the dropped sibling will land.
+  let dragState = null; // { source, parent, axis, ghost, dropLine, lastTargetIdx }
+  function startGripperDrag(e, source, parent, axis) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!source || !parent) return;
+
+    const { dx, dy } = iframeOffset();
+    const r = source.getBoundingClientRect();
+
+    // Ghost: a simple wireframe placeholder of the source's size.
+    // We deliberately don't clone the source node — cloning carries
+    // the target-doc's font / inherited styles, which look wrong in
+    // the parent doc and add layout/style work. A clean rect reads
+    // as "I'm moving something this big" and avoids style mismatches.
+    const ghost = document.createElement('div');
+    ghost.id = '__inspector-drag-ghost';
+    ghost.style.cssText = [
+      'position:fixed',
+      `left:${r.left + dx}px`, `top:${r.top + dy}px`,
+      `width:${r.width}px`,    `height:${r.height}px`,
+      'background:rgba(255,61,139,0.18)',
+      'outline:2px solid #ff3d8b',
+      'border-radius:4px',
+      'box-shadow:0 6px 18px rgba(255,61,139,0.30)',
+      'opacity:0.85', 'pointer-events:none',
+      'z-index:2147483646',
+    ].join(';');
+    document.body.appendChild(ghost);
+
+    const dropLine = document.createElement('div');
+    dropLine.id = '__inspector-drop-line';
+    dropLine.style.cssText = `position:fixed;background:#ff3d8b;border-radius:2px;z-index:2147483644;pointer-events:none;display:none;box-shadow:0 0 6px rgba(255,61,139,0.5);`;
+    document.body.appendChild(dropLine);
+
+    document.body.style.cursor = 'grabbing';
+    document.body.style.userSelect = 'none';
+
+    // Suppress iframe pointer events so ALL mouse events route to the
+    // parent doc for the entire drag. This solves three real bugs the
+    // user hit: (1) target-doc hover styles firing under the cursor,
+    // (2) mouseup landing on iframe contents and never reaching our
+    // up handler ("stuck — only refresh helps"), (3) mousemove inside
+    // the iframe triggering armed-level promotion mid-drag. Restored
+    // in teardown.
+    suppressIframePointerEvents(true);
+    clearGrippers();   // hide static handles during drag
+
+    dragState = {
+      source, parent, axis, ghost, dropLine,
+      offsetX: e.clientX - (r.left + dx),
+      offsetY: e.clientY - (r.top + dy),
+      lastTargetIdx: -1,
+    };
+
+    document.addEventListener('mousemove', onDragMove);
+    document.addEventListener('mouseup', onDragUp);
+    document.addEventListener('keydown', onDragKey, true);
+  }
+
+  function gapBetween(siblings, idx, axis, off) {
+    // Compute the visual position (parent-viewport coords) of the gap AT idx —
+    // i.e., the boundary BEFORE siblings[idx]. idx ranges 0..siblings.length.
+    const { dx, dy } = off;
+    if (idx <= 0) {
+      const r = siblings[0].getBoundingClientRect();
+      return axis === 'vertical'
+        ? { x: r.left + dx, y: r.top + dy, span: r.width }
+        : { x: r.left + dx, y: r.top + dy, span: r.height };
+    }
+    if (idx >= siblings.length) {
+      const r = siblings[siblings.length - 1].getBoundingClientRect();
+      return axis === 'vertical'
+        ? { x: r.left + dx, y: r.bottom + dy, span: r.width }
+        : { x: r.right + dx, y: r.top + dy, span: r.height };
+    }
+    const a = siblings[idx - 1].getBoundingClientRect();
+    const b = siblings[idx].getBoundingClientRect();
+    if (axis === 'vertical') {
+      return { x: Math.min(a.left, b.left) + dx, y: (a.bottom + b.top) / 2 + dy, span: Math.max(a.width, b.width) };
+    } else {
+      return { x: (a.right + b.left) / 2 + dx, y: Math.min(a.top, b.top) + dy, span: Math.max(a.height, b.height) };
+    }
+  }
+
+  function chooseDropIndex(parent, axis, cursorX, cursorY) {
+    // Cursor coords already in parent-viewport. Compare to each sibling's
+    // midpoint along the axis; drop index = first sibling whose midpoint
+    // is past the cursor. Returns 0..siblings.length.
+    const siblings = Array.from(parent.children).filter(c => c !== dragState.source);
+    if (siblings.length === 0) return 0;
+    const { dx, dy } = iframeOffset();
+    for (let i = 0; i < siblings.length; i++) {
+      const r = siblings[i].getBoundingClientRect();
+      const midA = axis === 'vertical' ? (r.top + r.bottom) / 2 + dy : (r.left + r.right) / 2 + dx;
+      const cursorA = axis === 'vertical' ? cursorY : cursorX;
+      if (cursorA < midA) return i;
+    }
+    return siblings.length;
+  }
+
+  function onDragMove(e) {
+    if (!dragState) return;
+    const { ghost, axis, parent, dropLine } = dragState;
+    ghost.style.left = (e.clientX - dragState.offsetX) + 'px';
+    ghost.style.top = (e.clientY - dragState.offsetY) + 'px';
+
+    const off = iframeOffset();
+    const dropIdxFiltered = chooseDropIndex(parent, axis, e.clientX, e.clientY);
+    // Translate filtered index back to full-children index so we can look up gap position.
+    // The drop line position is between the appropriate siblings in the LIVE order.
+    const siblings = Array.from(parent.children).filter(c => c !== dragState.source);
+    if (siblings.length === 0) { dropLine.style.display = 'none'; return; }
+    const gap = gapBetween(siblings, dropIdxFiltered, axis, off);
+    if (axis === 'vertical') {
+      dropLine.style.left = gap.x + 'px';
+      dropLine.style.top = (gap.y - 2) + 'px';
+      dropLine.style.width = gap.span + 'px';
+      dropLine.style.height = '4px';
+    } else {
+      dropLine.style.left = (gap.x - 2) + 'px';
+      dropLine.style.top = gap.y + 'px';
+      dropLine.style.width = '4px';
+      dropLine.style.height = gap.span + 'px';
+    }
+    dropLine.style.display = '';
+    dragState.lastTargetIdx = dropIdxFiltered;
+  }
+
+  function onDragUp(e) {
+    if (!dragState) return;
+    const { source, parent, axis, ghost, dropLine, lastTargetIdx } = dragState;
+    const teardown = () => {
+      ghost.remove();
+      dropLine.remove();
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      suppressIframePointerEvents(false);
+      document.removeEventListener('mousemove', onDragMove);
+      document.removeEventListener('mouseup', onDragUp);
+      document.removeEventListener('keydown', onDragKey, true);
+      dragState = null;
+      renderArmedIndicator();          // grippers at new positions
+      repositionSelectionOverlays();   // blue box follows the moved element
+      positionFabs();                  // FABs follow the moved element
+    };
+
+    // Snapshot original index BEFORE moving (for history).
+    const originalSiblings = Array.from(parent.children);
+    const fromIdx = originalSiblings.indexOf(source);
+    if (lastTargetIdx < 0) { teardown(); return; }
+
+    // Build siblings array WITHOUT source, then insert at targetIdx.
+    const others = originalSiblings.filter(c => c !== source);
+    const refNode = others[lastTargetIdx] || null;
+    parent.insertBefore(source, refNode);
+
+    // No-op detection AFTER the move (more reliable than predicting it):
+    // if the source landed at the same index, undo and skip history push.
+    const newIdx = Array.from(parent.children).indexOf(source);
+    if (newIdx === fromIdx) { teardown(); return; }
+    const cleanClasses = (cls) => (cls || '').split(/\s+/)
+      .filter(c => c && !c.startsWith('__inspector-')).join(' ');
+    const siblingsSnapshot = originalSiblings.map(s => ({
+      text: (s.textContent || '').trim().slice(0, 80),
+      classes: cleanClasses(s.className),
+    }));
+    redoStack.length = 0;
+    history.push({
+      kind: 'reorder',
+      parent: computeSelector(parent),
+      from: fromIdx,
+      to: newIdx,
+      child: {
+        text: (source.textContent || '').trim().slice(0, 80),
+        classes: cleanClasses(source.className),
+      },
+      siblingsSnapshot,
+      dom: { element: source, parent },
+    });
+    syncBadge();
+    teardown();
+  }
+
+  function onDragKey(e) {
+    if (!dragState) return;
+    if (e.key === 'Escape') {
+      // Cancel: just tear down without moving the source.
+      e.preventDefault();
+      e.stopPropagation();
+      const { ghost, dropLine } = dragState;
+      ghost.remove();
+      dropLine.remove();
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      suppressIframePointerEvents(false);
+      document.removeEventListener('mousemove', onDragMove);
+      document.removeEventListener('mouseup', onDragUp);
+      document.removeEventListener('keydown', onDragKey, true);
+      dragState = null;
+      renderArmedIndicator();
+    }
+  }
+
+  // ── Floating action buttons (FABs) ─────────────────────────────
+  // Two button groups that follow the selected element:
+  //   FAB-A (horizontal, top-right of selection): Reselect + Clear
+  //   FAB-B (vertical, right of selection):       Parent + First sibling
+  // Lazy-created on first call, then repositioned on every selection /
+  // scroll / resize. Live in parent doc; pointer-events:auto so clicks
+  // work normally and don't bleed through to the iframe.
+  let fabA = null, fabB = null;
+  const ICON_CURSOR = '<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 2 L13 7 L8 9 L6 14 Z" fill="currentColor"/></svg>';
+  const ICON_X      = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 4 L12 12 M12 4 L4 12"/></svg>';
+  const ICON_UP     = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10 L8 6 L12 10"/></svg>';
+  const ICON_DOWN   = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6 L8 10 L12 6"/></svg>';
+
+  function ensureFabs() {
+    if (fabA && fabB) return;
+    fabA = document.createElement('div');
+    fabA.id = '__inspector-fab-a';
+    fabA.className = '__inspector-fab horizontal';
+    fabA.innerHTML = `
+      <button data-act="reselect" title="Reselect (clear + pick again)">${ICON_CURSOR}</button>
+      <button data-act="clear" title="Clear selection">${ICON_X}</button>
+    `;
+    document.body.appendChild(fabA);
+
+    fabB = document.createElement('div');
+    fabB.id = '__inspector-fab-b';
+    fabB.className = '__inspector-fab vertical';
+    fabB.innerHTML = `
+      <button data-act="parent" title="Select parent">${ICON_UP}</button>
+      <button data-act="first-sibling" title="Select first sibling">${ICON_DOWN}</button>
+    `;
+    document.body.appendChild(fabB);
+
+    fabA.addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      const act = btn.dataset.act;
+      if (act === 'clear') clearSelection();
+      else if (act === 'reselect') { clearSelection(); enterPickMode(); }
+    });
+    fabB.addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn || btn.disabled) return;
+      const act = btn.dataset.act;
+      if (!selectedElement) return;
+      if (act === 'parent') {
+        const par = selectedElement.parentNode;
+        if (par && par.nodeType === 1 && par !== targetDoc.body && par !== targetDoc.documentElement) {
+          setSelection(par);
+        }
+      } else if (act === 'first-sibling') {
+        const par = selectedElement.parentNode;
+        const sib = par && par.firstElementChild;
+        if (sib && sib !== selectedElement) setSelection(sib);
+      }
+    });
+  }
+
+  // ── Floating selection overlays ────────────────────────────────
+  // One per selected element (multi-pick supported). Survives any
+  // overflow:hidden ancestor in the target by living in the parent
+  // doc. Hovered state (2px ring) is driven from cursor coords.
+  let selectionOverlays = [];
+  function clearSelectionOverlays() {
+    selectionOverlays.forEach(o => o.remove());
+    selectionOverlays = [];
+  }
+  // Position the overlay 1px OUTSIDE the element's bounds so the blue
+  // ring has a visible 1px gap before it (mirrors `outline-offset: 1px`).
+  function applyOverlayRect(o, r, dx, dy) {
+    o.style.left   = (r.left + dx - 1) + 'px';
+    o.style.top    = (r.top  + dy - 1) + 'px';
+    o.style.width  = (r.width  + 2)    + 'px';
+    o.style.height = (r.height + 2)    + 'px';
+  }
+  function renderSelectionOverlays() {
+    clearSelectionOverlays();
+    if (!settings.showSelectedOutline) return;
+    const elements = (typeof allSelected === 'function' ? allSelected() : (selectedElement ? [selectedElement] : []));
+    if (!elements.length) return;
+    const { dx, dy } = iframeOffset();
+    elements.forEach((el) => {
+      const r = el.getBoundingClientRect();
+      const o = document.createElement('div');
+      o.className = '__inspector-selection-overlay';
+      applyOverlayRect(o, r, dx, dy);
+      document.body.appendChild(o);
+      // Store the element reference so the hover detector can match.
+      o._inspectorEl = el;
+      selectionOverlays.push(o);
+    });
+  }
+  function repositionSelectionOverlays() {
+    if (!selectionOverlays.length) return;
+    const { dx, dy } = iframeOffset();
+    selectionOverlays.forEach(o => {
+      const el = o._inspectorEl;
+      if (!el || !el.isConnected) return;
+      const r = el.getBoundingClientRect();
+      applyOverlayRect(o, r, dx, dy);
+    });
+  }
+
+  // ── Pick-mode hover overlay ─────────────────────────────────────
+  // One singleton div in parent doc that follows whichever element
+  // the cursor is currently hovering during pick mode. Same overflow-
+  // escape trick as the selection overlay.
+  let pickHoverOverlay = null;
+  function ensurePickHoverOverlay() {
+    if (pickHoverOverlay) return pickHoverOverlay;
+    pickHoverOverlay = document.createElement('div');
+    pickHoverOverlay.className = '__inspector-pick-hover-overlay';
+    document.body.appendChild(pickHoverOverlay);
+    return pickHoverOverlay;
+  }
+  function showPickHoverOverlay(el) {
+    if (!el) return;
+    ensurePickHoverOverlay();
+    const { dx, dy } = iframeOffset();
+    const r = el.getBoundingClientRect();
+    applyOverlayRect(pickHoverOverlay, r, dx, dy);
+    // Inline `block` overrides the stylesheet's `display: none` default.
+    pickHoverOverlay.style.display = 'block';
+  }
+  function hidePickHoverOverlay() {
+    if (pickHoverOverlay) pickHoverOverlay.style.display = 'none';
+  }
+  function updateSelectionHover(cursorXLocal, cursorYLocal) {
+    // cursorX/Y are in TARGET-DOC local space (same space as
+    // getBoundingClientRect on selected elements).
+    selectionOverlays.forEach(o => {
+      const el = o._inspectorEl;
+      if (!el) { o.classList.remove('hovered'); return; }
+      const r = el.getBoundingClientRect();
+      const inside = cursorXLocal >= r.left && cursorXLocal <= r.right
+                  && cursorYLocal >= r.top  && cursorYLocal <= r.bottom;
+      o.classList.toggle('hovered', inside);
+    });
+  }
+
+  function positionFabs() {
+    // FABs share the "Show selection box" toggle — they're decoration
+    // pinned to the selection outline; hiding the outline also hides
+    // these action buttons (otherwise they'd float disconnected).
+    if (!selectedElement || !settings.showSelectedOutline) {
+      if (fabA) fabA.classList.remove('visible');
+      if (fabB) fabB.classList.remove('visible');
+      return;
+    }
+    ensureFabs();
+    const { dx, dy } = iframeOffset();
+    const r = selectedElement.getBoundingClientRect();
+    const rl = r.left + dx, rt = r.top + dy, rr = r.right + dx, rb = r.bottom + dy;
+
+    // Show first so we can measure
+    fabA.classList.add('visible');
+    fabB.classList.add('visible');
+    const ar = fabA.getBoundingClientRect();
+    const br = fabB.getBoundingClientRect();
+    const vw = window.innerWidth, vh = window.innerHeight;
+
+    // FAB-A: anchor to top-right corner of selection. Default ABOVE the
+    // selection; flip below if there's no room above. Clamp horizontally
+    // to viewport when selection extends past the right edge.
+    let aLeft = rr - ar.width;
+    let aTop  = rt - ar.height - 6;
+    if (aTop < 6) aTop = rb + 6;
+    if (aLeft + ar.width > vw - 6) aLeft = vw - ar.width - 6;
+    if (aLeft < 6) aLeft = 6;
+    fabA.style.left = aLeft + 'px';
+    fabA.style.top  = aTop  + 'px';
+
+    // FAB-B: ALWAYS on the right side of the selection, vertically
+    // centered. Clamp to the viewport's right edge when the selection
+    // is wider than the viewport (full-width rows are the case where
+    // this matters). Never flip to the left — keeps the buttons in
+    // their expected spot regardless of selection size.
+    let bLeft = rr + 6;
+    let bTop  = rt + (rb - rt) / 2 - br.height / 2;
+    if (bLeft + br.width > vw - 6) bLeft = vw - br.width - 6;
+    if (bLeft < 6) bLeft = 6;
+    if (bTop < 6) bTop = 6;
+    if (bTop + br.height > vh - 6) bTop = vh - br.height - 6;
+    fabB.style.left = bLeft + 'px';
+    fabB.style.top  = bTop  + 'px';
+
+    // Disable parent / first-sibling buttons when not applicable.
+    const par = selectedElement.parentNode;
+    const parDisabled = !par || par.nodeType !== 1 || par === targetDoc.body || par === targetDoc.documentElement;
+    fabB.querySelector('[data-act="parent"]').disabled = parDisabled;
+    const isFirst = par && par.firstElementChild === selectedElement;
+    fabB.querySelector('[data-act="first-sibling"]').disabled = !par || isFirst;
+  }
+
+  function renderArmedIndicator() {
+    const ind = ensureArmedIndicator();
+    if (!armedLevel || armedLevel.element === selectedElement) {
+      ind.style.display = 'none';
+    } else {
+      const { dx, dy } = iframeOffset();
+      const r = armedLevel.element.getBoundingClientRect();
+      ind.style.left = (r.left + dx) + 'px';
+      ind.style.top = (r.top + dy) + 'px';
+      ind.style.width = r.width + 'px';
+      ind.style.height = r.height + 'px';
+      ind.style.display = '';
+    }
+    renderGrippers();
+  }
+
+  function clearInlineForChange(change) {
+    if (!change || !change.selector || !change.property) return;
+    try {
+      targetDoc.querySelectorAll(change.selector).forEach(el => {
+        el.style.removeProperty(change.property);
+      });
+    } catch (_) {
+      // Selector might be invalid as a CSS query (e.g. contains : pseudo
+      // classes the inspector composed). Fall back to the active pick.
+      if (selectedElement) selectedElement.style.removeProperty(change.property);
+    }
   }
 
   function redoLast() {
     if (redoStack.length === 0) return;
-    const entry = redoStack.pop();
-    changes.push(entry);
-    if (selectedElement) {
-      selectedElement.style.setProperty(entry.property, entry.to);
+    const h = redoStack.pop();
+    history.push(h);
+
+    if (h.kind === 'css-add') {
+      changes.push({ ...h.next });
+      if (selectedElement) {
+        selectedElement.style.setProperty(h.next.property, h.next.to);
+      }
+    } else if (h.kind === 'css-update') {
+      const idx = changes.findIndex(c => c.selector === h.next.selector && c.property === h.next.property);
+      if (idx >= 0) changes[idx] = { ...h.next };
+      else changes.push({ ...h.next });
+    } else if (h.kind === 'css-remove') {
+      const idx = changes.findIndex(c => c.selector === h.prev.selector && c.property === h.prev.property);
+      if (idx >= 0) {
+        const removed = changes.splice(idx, 1)[0];
+        clearInlineForChange(removed);
+      }
+    } else if (h.kind === 'intent-add') {
+      componentIntents.push(h.next);
+      reapplySwapDom(h.dom);
+    } else if (h.kind === 'intent-update') {
+      const idx = componentIntents.findIndex(i => sameIntentTarget(i, h.prev));
+      if (idx >= 0) componentIntents[idx] = h.next;
+      else componentIntents.push(h.next);
+      reapplySwapDom(h.dom);
+    } else if (h.kind === 'intent-remove') {
+      const idx = componentIntents.findIndex(i => sameIntentTarget(i, h.prev));
+      if (idx >= 0) componentIntents.splice(idx, 1);
+    } else if (h.kind === 'reorder') {
+      reapplyReorder(h);
     }
+
     syncBadge();
     syncModifiedIndicators();
+    rebuildLiveChangesStyles();
+    if (selectedElement && (h.kind === 'intent-add' || h.kind === 'intent-update')) {
+      renderDesignPanel();
+    }
+    if (h.kind === 'reorder') {
+      repositionSelectionOverlays();
+      positionFabs();
+    }
   }
 
   function generateChangesJson() {
     return JSON.stringify(changes, null, 2);
   }
+
+  // Human-readable line for a component intent — mirrors the bullets used
+  // for CSS changes so the summary at the top of the prompt reads naturally.
+  function componentIntentLine(i) {
+    if (i.action === 'swap-variant') {
+      return `- \`${i.selector}\` (${i.component}): ${i.prop} ${i.from} → ${i.to}`;
+    }
+    if (i.action === 'convert') {
+      const sels = Array.isArray(i.selectors) ? i.selectors.join(', ') : i.selector;
+      return `- Convert ${sels} → ${i.to}`;
+    }
+    return `- ${JSON.stringify(i)}`;
+  }
+
   function generateCopyPrompt() {
-    if (changes.length === 0) return 'No changes to apply.';
-    const lines = changes.map(c =>
-      `- \`${c.selector}\`: ${c.property} ${c.from} → ${c.to}`
-    );
-    const summary = 'Apply these CSS changes:\n' + lines.join('\n');
-    const json = JSON.stringify(changes);
-    return `${summary}\n\n<changes>\n${json}\n</changes>`;
+    const hasChanges = changes.length > 0;
+    const hasIntents = componentIntents.length > 0;
+    const reorders = reorderEntries();
+    const hasReorders = reorders.length > 0;
+    if (!hasChanges && !hasIntents && !hasReorders) return 'No changes to apply.';
+
+    const parts = [];
+    if (hasChanges) {
+      const lines = changes.map(c =>
+        `- \`${c.selector}\`: ${c.property} ${c.from} → ${c.to}`
+      );
+      parts.push('Apply these CSS changes:\n' + lines.join('\n'));
+    }
+    if (hasIntents) {
+      const lines = componentIntents.map(componentIntentLine);
+      parts.push('And these design-system component changes:\n' + lines.join('\n'));
+    }
+    if (hasReorders) {
+      // Collapse same-parent reorders to their net effect for the
+      // user-facing summary. The <reorders> block still ships the
+      // full sequence so Claude can verify intent.
+      const byParent = new Map();
+      reorders.forEach(h => {
+        const prev = byParent.get(h.parent);
+        if (prev) prev.to = h.to;
+        else byParent.set(h.parent, { parent: h.parent, from: h.from, to: h.to, child: h.child });
+      });
+      const lines = Array.from(byParent.values()).map(r =>
+        `- Reorder in \`${r.parent}\`: "${(r.child && r.child.text) || '—'}" from index ${r.from} → ${r.to}`
+      );
+      parts.push('And these sibling reorders:\n' + lines.join('\n'));
+    }
+    const summary = parts.join('\n\n');
+
+    const blocks = [];
+    if (hasChanges) blocks.push(`<changes>\n${JSON.stringify(changes)}\n</changes>`);
+    if (hasIntents) blocks.push(`<components>\n${JSON.stringify(componentIntents)}\n</components>`);
+    if (hasReorders) {
+      const wire = reorders.map(h => ({
+        action: 'reorder',
+        parent: h.parent,
+        from: h.from,
+        to: h.to,
+        child: h.child,
+        siblingsSnapshot: h.siblingsSnapshot,
+      }));
+      blocks.push(`<reorders>\n${JSON.stringify(wire)}\n</reorders>`);
+    }
+
+    return `${summary}\n\n${blocks.join('\n\n')}`;
   }
   function renderDisabledPreview(panel) {
     const placeholder = (label, val, unit) => `
@@ -1852,6 +4286,76 @@
       <button class="layer-eye-btn${isHidden ? ' hidden' : ''}" data-layer-eye="${id}" data-tip="${isHidden ? 'Show layer' : 'Hide layer'}">${isHidden ? SVG_EYE_OFF : SVG_EYE}</button>
       <button class="layer-minus-btn" data-layer-remove="${id}" data-tip="Remove layer">−</button>
     </div>`;
+  }
+
+  // 3×3 alignment pad for flex / grid containers. Maps each dot to a
+  // (horizontal, vertical) alignment pair, then translates to the right
+  // CSS properties for the container's layout type:
+  //   flex row    → col controls justify-content,  row controls align-items
+  //   flex column → col controls align-items,      row controls justify-content
+  //   grid        → col controls justify-items,    row controls align-items
+  // So clicking the top-right dot always lands the children at the top-right
+  // of the container regardless of flex direction.
+  function alignmentPadAxes(cs) {
+    const display = cs.display || '';
+    const isGrid = display.indexOf('grid') !== -1;
+    const isFlex = display.indexOf('flex') !== -1;
+    if (!isGrid && !isFlex) return null;
+    const colReversed = cs.flexDirection === 'column' || cs.flexDirection === 'column-reverse';
+    if (isGrid) {
+      return { colProp: 'justify-items',   rowProp: 'align-items',     mode: 'grid' };
+    }
+    if (colReversed) {
+      return { colProp: 'align-items',     rowProp: 'justify-content', mode: 'flex' };
+    }
+    return     { colProp: 'justify-content', rowProp: 'align-items',   mode: 'flex' };
+  }
+
+  // Map a CSS alignment value (flex-start / start / center / flex-end / end)
+  // to a 0/1/2 index, or -1 for anything else (stretch, space-between, etc.).
+  function alignToIdx(value) {
+    const v = String(value || '').toLowerCase();
+    if (v === 'flex-start' || v === 'start' || v === 'normal') return 0;
+    if (v === 'center') return 1;
+    if (v === 'flex-end'   || v === 'end')   return 2;
+    return -1;
+  }
+
+  // Translate a 0/1/2 index back to a CSS value appropriate for the property.
+  // flex-* properties want `flex-start`/`flex-end`; grid-* / items properties
+  // want bare `start`/`end`.
+  function idxToValue(idx, prop) {
+    const isFlexProp = prop === 'justify-content' || prop === 'align-items';
+    const useFlex = isFlexProp; // both `align-items` and `justify-content` accept both forms; flex-* is the older spelling.
+    if (idx === 0) return useFlex ? 'flex-start' : 'start';
+    if (idx === 1) return 'center';
+    if (idx === 2) return useFlex ? 'flex-end' : 'end';
+    return '';
+  }
+
+  function buildAlignmentPad(cs) {
+    const axes = alignmentPadAxes(cs);
+    if (!axes) return '';
+    const colVal = cs[axes.colProp.replace(/-([a-z])/g, (_, c) => c.toUpperCase())];
+    const rowVal = cs[axes.rowProp.replace(/-([a-z])/g, (_, c) => c.toUpperCase())];
+    const colIdx = alignToIdx(colVal);
+    const rowIdx = alignToIdx(rowVal);
+    let dots = '';
+    const POS = ['start','center','end'];
+    for (let r = 0; r < 3; r++) {
+      for (let c = 0; c < 3; c++) {
+        const active = (c === colIdx && r === rowIdx);
+        const tip = `${POS[c]}, ${POS[r]} (${axes.colProp}: ${idxToValue(c, axes.colProp)}, ${axes.rowProp}: ${idxToValue(r, axes.rowProp)})`;
+        dots += `<button class="align-pad-dot${active ? ' active' : ''}" data-align-col="${c}" data-align-row="${r}" data-tip="${esc(tip)}"></button>`;
+      }
+    }
+    // Caller is responsible for the section label (e.g. "Align children")
+    // so this builder can be inlined into different layouts without duplicating it.
+    return `
+      <div class="inspector-align-pad" data-align-mode="${axes.mode}" data-col-prop="${axes.colProp}" data-row-prop="${axes.rowProp}">
+        ${dots}
+      </div>
+    `;
   }
 
   function buildFillSection(cs, sel) {
@@ -2464,12 +4968,48 @@
     const mt = pxStr(cs.marginTop), mr = pxStr(cs.marginRight), mb = pxStr(cs.marginBottom), ml = pxStr(cs.marginLeft);
     const pt = pxStr(cs.paddingTop), pr = pxStr(cs.paddingRight), pb = pxStr(cs.paddingBottom), pl = pxStr(cs.paddingLeft);
 
+    // Build the 3×3 child-alignment pad — only renders when the picked
+    // element is a flex/grid container. Maps screen-position dots to
+    // (justify-content, align-items) — for flex-column, the axes swap so
+    // the dot's visual position always matches the resulting layout.
+    const alignPadHtml = buildAlignmentPad(cs);
+
+    // Gap values (only meaningful for flex/grid; fields are hidden otherwise).
+    const cg = pxStr(cs.columnGap);
+    const rg = pxStr(cs.rowGap);
+
+    // Figma-style shorthand SVGs for the compact controls.
+    const SVG_GAP_COL = '<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><line x1="3" y1="2.5" x2="3" y2="11.5"/><line x1="11" y1="2.5" x2="11" y2="11.5"/><line x1="6" y1="7" x2="8" y2="7" stroke-dasharray="1.5 1"/></svg>';
+    const SVG_GAP_ROW = '<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><line x1="2.5" y1="3" x2="11.5" y2="3"/><line x1="2.5" y1="11" x2="11.5" y2="11"/><line x1="7" y1="6" x2="7" y2="8" stroke-dasharray="1.5 1"/></svg>';
+    const SVG_PAD_X = '<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><rect x="4.5" y="3" width="5" height="8" rx="0.8"/><line x1="2" y1="2.5" x2="2" y2="11.5"/><line x1="12" y1="2.5" x2="12" y2="11.5"/></svg>';
+    const SVG_PAD_Y = '<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><rect x="3" y="4.5" width="8" height="5" rx="0.8"/><line x1="2.5" y1="2" x2="11.5" y2="2"/><line x1="2.5" y1="12" x2="11.5" y2="12"/></svg>';
+
+    // Compact padding shorthand: padding-x (left+right) and padding-y
+    // (top+bottom). Uses synthetic data-prop names that wireUpInputs
+    // expands to two real CSS properties. data-from-a / data-from-b
+    // carry the original values for each side so trackChange records
+    // both sides correctly even after multiple edits.
+    function paddingShort(axis, valA, valB) {
+      const icon = axis === 'x' ? SVG_PAD_X : SVG_PAD_Y;
+      const mixed = valA !== valB;
+      const displayed = mixed ? '' : valA;
+      const propName = `padding-${axis}`;
+      const tip = `Padding ${axis === 'x' ? 'left + right' : 'top + bottom'} (drag to scrub)`;
+      return `<div class="inspector-field" data-prop="${propName}">
+        <span class="inspector-fi" data-scrub="${propName}" data-tip="${tip}">${icon}</span>
+        <input value="${displayed}" ${mixed ? 'placeholder="Mixed"' : ''} data-prop="${propName}" data-sel="${sel}" data-from="${valA}" data-from-a="${valA}" data-from-b="${valB}">
+        <span class="inspector-fu">px</span>
+        <button class="inspector-reset-btn" data-reset="${propName}" data-tip="Reset to original">×</button>
+      </div>`;
+    }
+
     const layoutHtml = `
       <div class="inspector-section">
         <div class="inspector-section-hd" style="cursor:pointer;" data-collapse="section">
           <span class="inspector-section-title">Layout</span>
           <button class="inspector-section-chevron" data-tip="Click to collapse/expand this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
         </div>
+
         <div class="inspector-sub-label" style="margin-top:0;">Flow</div>
         <div class="inspector-row"><div class="inspector-ig">
           <button class="inspector-ig-btn${isRow ? ' on' : ''}" data-flow="row" data-tip="${TIPS['row']}">${flowIcons.row}</button>
@@ -2477,65 +5017,106 @@
           <button class="inspector-ig-btn${isWrap ? ' on' : ''}" data-flow="wrap" data-tip="${TIPS['wrap']}">${flowIcons.wrap}</button>
           <button class="inspector-ig-btn${isGrid ? ' on' : ''}" data-flow="grid" data-tip="${TIPS['grid']}">${flowIcons.grid}</button>
         </div></div>
+
+        <!-- Dimensions: always full-width, two columns -->
         <div class="inspector-sub-label">Dimensions</div>
         <div class="inspector-g2" style="margin-bottom:8px;">
-          ${field('W', 'width', pxStr(cs.width), 'px')}
+          ${field('W', 'width',  pxStr(cs.width),  'px')}
           ${field('H', 'height', pxStr(cs.height), 'px')}
         </div>
-        <div class="inspector-sub-label" style="margin-top:0;">
-          <span>Padding &amp; Margin</span>
-          <button class="inspector-expand-btn" data-expand="spacing" data-tip="Expand individual margin and padding controls">
-            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="12" height="12" rx="2"/></svg>
+
+        ${alignPadHtml
+          ? `<div class="inspector-layout-split">
+               <div class="inspector-layout-half">
+                 <div class="inspector-sub-label" style="margin-top:0;">Align children</div>
+                 ${alignPadHtml}
+               </div>
+               <div class="inspector-layout-half">
+                 <div class="inspector-sub-label" style="margin-top:0;">Gap</div>
+                 <div class="inspector-stack-v">
+                   ${iconField(SVG_GAP_COL, 'column-gap', cg, 'px')}
+                   ${iconField(SVG_GAP_ROW, 'row-gap',    rg, 'px')}
+                 </div>
+               </div>
+             </div>`
+          : ''}
+
+        <!-- Compact padding row: x | y | corner-brackets icon. Two distinct
+             affordances on this row:
+             • "Show margins box" link (in the label above) toggles the
+               orange/teal margin+padding diagram below.
+             • Corner-brackets icon (right of the padding-y field) toggles
+               the individual per-side padding fields (↑ → ↓ ←). -->
+        <div class="inspector-sub-label">
+          <span>Padding</span>
+          <button class="inspector-expand-link" data-expand="box" data-tip="Show the full margin + padding diagram">Show margins box</button>
+        </div>
+        <div class="inspector-padding-row" style="margin-bottom:8px;">
+          ${paddingShort('x', pl, pr)}
+          ${paddingShort('y', pt, pb)}
+          <button class="inspector-padding-individual-btn" data-expand="individual" data-tip="Edit each side individually" aria-label="Individual padding sides">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M2 5.5V2.5h3"/>
+              <path d="M10.5 2.5h3v3"/>
+              <path d="M13.5 10.5v3h-3"/>
+              <path d="M5.5 13.5h-3v-3"/>
+            </svg>
           </button>
         </div>
-        <div class="inspector-sp-widget" style="margin-bottom:4px;">
-          <div class="inspector-sp-margin">
-            <span class="inspector-sp-margin-label">Margin</span>
-            <div class="inspector-sv" style="grid-column:2;grid-row:1;align-self:center;"><input value="${mt}" data-prop="margin-top" data-sel="${sel}" data-from="${mt}"></div>
-            <div class="inspector-sv" style="grid-column:1;grid-row:2;align-self:center;justify-self:center;"><input value="${ml}" data-prop="margin-left" data-sel="${sel}" data-from="${ml}"></div>
-            <div class="inspector-sp-padding" style="grid-column:2;grid-row:2;">
-              <span class="inspector-sp-padding-label">Padding</span>
-              <div class="inspector-sv" style="grid-column:2;grid-row:1;align-self:center;"><input value="${pt}" data-prop="padding-top" data-sel="${sel}" data-from="${pt}"></div>
-              <div class="inspector-sv" style="grid-column:1;grid-row:2;align-self:center;justify-self:center;"><input value="${pl}" data-prop="padding-left" data-sel="${sel}" data-from="${pl}"></div>
-              <div class="inspector-sp-element">element</div>
-              <div class="inspector-sv" style="grid-column:3;grid-row:2;align-self:center;justify-self:center;"><input value="${pr}" data-prop="padding-right" data-sel="${sel}" data-from="${pr}"></div>
-              <div class="inspector-sv" style="grid-column:2;grid-row:3;align-self:center;"><input value="${pb}" data-prop="padding-bottom" data-sel="${sel}" data-from="${pb}"></div>
+
+        <!-- Individual padding (per-side) — toggled by the corner-brackets
+             icon. Laid out so each column aligns under the compact field
+             that controls those sides:
+               col 1 (under padding-x): ← (left) over → (right)
+               col 2 (under padding-y): ↑ (top) over ↓ (bottom)
+             Each compact-x/y field becomes a vertically-stacked pair. -->
+        <div id="__inspector-padding-individual" style="display:none;margin-bottom:8px;">
+          <div class="inspector-g2">
+            <div class="inspector-stack-v">
+              ${field('←', 'padding-left',   pl, 'px')}
+              ${field('→', 'padding-right',  pr, 'px')}
             </div>
-            <div class="inspector-sv" style="grid-column:3;grid-row:2;align-self:center;justify-self:center;"><input value="${mr}" data-prop="margin-right" data-sel="${sel}" data-from="${mr}"></div>
-            <div class="inspector-sv" style="grid-column:2;grid-row:3;align-self:center;"><input value="${mb}" data-prop="margin-bottom" data-sel="${sel}" data-from="${mb}"></div>
-          </div>
-        </div>
-        <div id="__inspector-sp-expanded" style="display:none;">
-          <div class="inspector-sp-expanded">
-            <div class="inspector-sp-expanded-title">Padding — individual</div>
-            <div class="inspector-sp-4">
-              ${field('↑', 'padding-top', pt, 'px')}
-              ${field('→', 'padding-right', pr, 'px')}
+            <div class="inspector-stack-v">
+              ${field('↑', 'padding-top',    pt, 'px')}
               ${field('↓', 'padding-bottom', pb, 'px')}
-              ${field('←', 'padding-left', pl, 'px')}
-            </div>
-          </div>
-          <div class="inspector-sp-expanded" style="margin-top:6px;">
-            <div class="inspector-sp-expanded-title">Margin — individual</div>
-            <div class="inspector-sp-4">
-              ${field('↑', 'margin-top', mt, 'px')}
-              ${field('→', 'margin-right', mr, 'px')}
-              ${field('↓', 'margin-bottom', mb, 'px')}
-              ${field('←', 'margin-left', ml, 'px')}
             </div>
           </div>
         </div>
-        <div class="inspector-check-row" data-check="overflow" data-tip="Clip content — hide overflow: hidden clips content outside the element bounds">
-          <div class="inspector-check-box${cs.overflow === 'hidden' ? ' on' : ''}">
-            <svg viewBox="0 0 10 10" fill="none" stroke="${cs.overflow === 'hidden' ? '#1c1c1c' : 'transparent'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 3.5,7.5 8.5,2"/></svg>
+
+        <!-- Margins box (orange/teal diagram, editable margins + paddings)
+             — toggled by the "Show margins box" text link above. -->
+        <div id="__inspector-margins-box" style="display:none;">
+          <div class="inspector-sp-widget" style="margin-bottom:8px;">
+            <div class="inspector-sp-margin">
+              <span class="inspector-sp-margin-label">Margin</span>
+              <div class="inspector-sv" style="grid-column:2;grid-row:1;align-self:center;"><input value="${mt}" data-prop="margin-top" data-sel="${sel}" data-from="${mt}"></div>
+              <div class="inspector-sv" style="grid-column:1;grid-row:2;align-self:center;justify-self:center;"><input value="${ml}" data-prop="margin-left" data-sel="${sel}" data-from="${ml}"></div>
+              <div class="inspector-sp-padding" style="grid-column:2;grid-row:2;">
+                <span class="inspector-sp-padding-label">Padding</span>
+                <div class="inspector-sv" style="grid-column:2;grid-row:1;align-self:center;"><input value="${pt}" data-prop="padding-top" data-sel="${sel}" data-from="${pt}"></div>
+                <div class="inspector-sv" style="grid-column:1;grid-row:2;align-self:center;justify-self:center;"><input value="${pl}" data-prop="padding-left" data-sel="${sel}" data-from="${pl}"></div>
+                <div class="inspector-sp-element">element</div>
+                <div class="inspector-sv" style="grid-column:3;grid-row:2;align-self:center;justify-self:center;"><input value="${pr}" data-prop="padding-right" data-sel="${sel}" data-from="${pr}"></div>
+                <div class="inspector-sv" style="grid-column:2;grid-row:3;align-self:center;"><input value="${pb}" data-prop="padding-bottom" data-sel="${sel}" data-from="${pb}"></div>
+              </div>
+              <div class="inspector-sv" style="grid-column:3;grid-row:2;align-self:center;justify-self:center;"><input value="${mr}" data-prop="margin-right" data-sel="${sel}" data-from="${mr}"></div>
+              <div class="inspector-sv" style="grid-column:2;grid-row:3;align-self:center;"><input value="${mb}" data-prop="margin-bottom" data-sel="${sel}" data-from="${mb}"></div>
+            </div>
           </div>
-          <span class="inspector-check-label">Clip content</span>
         </div>
-        <div class="inspector-check-row" data-check="box-sizing" data-tip="Border box — box-sizing: border-box makes width/height include padding and border">
-          <div class="inspector-check-box${cs.boxSizing === 'border-box' ? ' on' : ''}">
-            <svg viewBox="0 0 10 10" fill="none" stroke="${cs.boxSizing === 'border-box' ? '#1c1c1c' : 'transparent'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 3.5,7.5 8.5,2"/></svg>
+        <div class="inspector-check-pair">
+          <div class="inspector-check-row" data-check="overflow" data-tip="Clip content — overflow: hidden clips content outside the element bounds">
+            <div class="inspector-check-box${cs.overflow === 'hidden' ? ' on' : ''}">
+              <svg viewBox="0 0 10 10" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 3.5,7.5 8.5,2"/></svg>
+            </div>
+            <span class="inspector-check-label">Clip content</span>
           </div>
-          <span class="inspector-check-label">Border box</span>
+          <div class="inspector-check-row" data-check="box-sizing" data-tip="Border box — box-sizing: border-box makes width/height include padding and border">
+            <div class="inspector-check-box${cs.boxSizing === 'border-box' ? ' on' : ''}">
+              <svg viewBox="0 0 10 10" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 3.5,7.5 8.5,2"/></svg>
+            </div>
+            <span class="inspector-check-label">Border box</span>
+          </div>
         </div>
       </div>`;
 
@@ -2603,15 +5184,11 @@
             ${iconField(icons.letterSpacing, 'letter-spacing', pxStr(cs.letterSpacing), 'px')}
           </div>
         </div>
-        <div style="font-size:10px;color:#555;margin-bottom:5px;">Alignment</div>
+        <div style="font-size:10px;color:#555;margin-bottom:5px;">Text alignment</div>
         <div class="inspector-ig">
           <button class="inspector-ig-btn${textAlign === 'left' || textAlign === 'start' ? ' on' : ''}" data-align="left" data-tip="Align text left">${alignIcons.left}</button>
           <button class="inspector-ig-btn${textAlign === 'center' ? ' on' : ''}" data-align="center" data-tip="Align text center">${alignIcons.center}</button>
           <button class="inspector-ig-btn${textAlign === 'right' || textAlign === 'end' ? ' on' : ''}" data-align="right" data-tip="Align text right">${alignIcons.right}</button>
-          <div class="inspector-ig-sep"></div>
-          <button class="inspector-ig-btn" data-valign="top" data-tip="Vertical align top">${alignIcons.vTop}</button>
-          <button class="inspector-ig-btn" data-valign="middle" data-tip="Vertical align middle">${alignIcons.vMid}</button>
-          <button class="inspector-ig-btn" data-valign="bottom" data-tip="Vertical align bottom">${alignIcons.vBot}</button>
         </div>
       </div>`;
 
@@ -2620,8 +5197,61 @@
     const strokeHtml = buildStrokeSection(cs, sel);
     const effectsHtml = buildEffectsSection(cs, sel);
 
+    // ── COMPONENT SECTION (design system) ──
+    const componentHtml = buildComponentSection(selectedElement, sel);
+
+    // ── SCOPE ROW ─ Sits just above Position. Hosts two toggles styled
+    // to match the rest of the panel's checkboxes (.inspector-check-box
+    // — dark square, white-with-check when on) + a tag showing the
+    // active selector. ──
+    const scopeCheck = (on) =>
+      `<div class="inspector-check-box${on ? ' on' : ''}">
+         <svg viewBox="0 0 10 10" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 3.5,7.5 8.5,2"/></svg>
+       </div>`;
+    const scopeHtml = `
+      <div class="inspector-scope-row">
+        <div class="inspector-scope-toggle" data-scope-toggle="classscope" data-tip="ON: edits apply to every element sharing this class. OFF: edits apply only to this one picked element.">
+          ${scopeCheck(settings.classScope)}
+          <span>Edit by class</span>
+        </div>
+        <div class="inspector-scope-toggle" data-scope-toggle="outline" data-tip="Show a persistent blue outline on the picked element">
+          ${scopeCheck(settings.showSelectedOutline)}
+          <span>Show selection box</span>
+        </div>
+        <span class="inspector-scope-target" data-tip="${esc(sel)}"><code>${esc(sel)}</code></span>
+      </div>
+    `;
+
     // ── RENDER ALL ──
-    panel.innerHTML = positionHtml + layoutHtml + appearanceHtml + typographyHtml + fillHtml + strokeHtml + effectsHtml;
+    panel.innerHTML = componentHtml + scopeHtml + positionHtml + layoutHtml + appearanceHtml + typographyHtml + fillHtml + strokeHtml + effectsHtml;
+
+    // Component section needs its own wiring (dropdowns + Ask-Claude btn).
+    wireComponentSection(panel, selectedElement, sel);
+    // Scope-row wire-up — two custom-styled checkboxes gate preview
+    // behavior. Click anywhere on the toggle div flips the `.on` class
+    // on its inner .inspector-check-box, persists the setting, and runs
+    // the corresponding side effect.
+    panel.querySelectorAll('.inspector-scope-toggle[data-scope-toggle]').forEach(t => {
+      t.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const which = t.dataset.scopeToggle;
+        const box = t.querySelector('.inspector-check-box');
+        const on = !box.classList.contains('on');
+        box.classList.toggle('on', on);
+        if (which === 'classscope') {
+          saveSettings({ classScope: on });
+          rebuildLiveChangesStyles();
+          renderDesignPanel();
+        } else if (which === 'outline') {
+          saveSettings({ showSelectedOutline: on });
+          applySelectedOutlineVisibility();
+          // FABs + selection overlays are pinned to the selection
+          // outline, so they share its visibility.
+          renderSelectionOverlays();
+          positionFabs();
+        }
+      });
+    });
 
     // ── WIRE UP ALL INPUTS ──
     wireUpInputs(panel, sel);
@@ -2663,11 +5293,26 @@
       });
     });
 
-    // Expand/collapse spacing
-    panel.querySelectorAll('.inspector-expand-btn[data-expand="spacing"]').forEach(btn => {
+    // Toggle: "Show margins box" link reveals the orange/teal margin+padding
+    // diagram beneath the compact controls.
+    panel.querySelectorAll('.inspector-expand-link[data-expand="box"]').forEach(btn => {
       btn.addEventListener('click', () => {
-        const expanded = panel.querySelector('#__inspector-sp-expanded');
-        if (expanded) expanded.style.display = expanded.style.display === 'none' ? 'block' : 'none';
+        const box = panel.querySelector('#__inspector-margins-box');
+        if (!box) return;
+        const isOpen = box.style.display !== 'none';
+        box.style.display = isOpen ? 'none' : 'block';
+        btn.textContent = isOpen ? 'Show margins box' : 'Hide margins box';
+      });
+    });
+    // Toggle: corner-brackets icon (right of the padding-y field) reveals
+    // the per-side padding fields (↑ → ↓ ←). Independent of the margins box.
+    panel.querySelectorAll('.inspector-padding-individual-btn[data-expand="individual"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const ind = panel.querySelector('#__inspector-padding-individual');
+        if (!ind) return;
+        const isOpen = ind.style.display !== 'none';
+        ind.style.display = isOpen ? 'none' : 'block';
+        btn.classList.toggle('active', !isOpen);
       });
     });
 
@@ -2719,6 +5364,36 @@
       });
     });
 
+    // Alignment pad dots — set both axes' alignment properties in one click.
+    // Axes were chosen in buildAlignmentPad based on the current display +
+    // flex-direction; the pad's data-* attributes carry the actual CSS
+    // properties so we don't need to re-derive them here.
+    const pad = panel.querySelector('.inspector-align-pad');
+    if (pad) {
+      const colProp = pad.dataset.colProp;
+      const rowProp = pad.dataset.rowProp;
+      pad.querySelectorAll('.align-pad-dot').forEach(dot => {
+        dot.addEventListener('click', () => {
+          const c = parseInt(dot.dataset.alignCol, 10);
+          const r = parseInt(dot.dataset.alignRow, 10);
+          const colVal = idxToValue(c, colProp);
+          const rowVal = idxToValue(r, rowProp);
+          // Live preview on the picked element.
+          if (selectedElement) {
+            selectedElement.style.setProperty(colProp, colVal);
+            selectedElement.style.setProperty(rowProp, rowVal);
+          }
+          // Track both changes so the live class-scope sheet + paste-back
+          // both see them.
+          trackChange(sel, colProp, cs[colProp.replace(/-([a-z])/g, (_, ch) => ch.toUpperCase())], colVal);
+          trackChange(sel, rowProp, cs[rowProp.replace(/-([a-z])/g, (_, ch) => ch.toUpperCase())], rowVal);
+          // Visual: clear all dots, mark the picked one.
+          pad.querySelectorAll('.align-pad-dot').forEach(d => d.classList.remove('active'));
+          dot.classList.add('active');
+        });
+      });
+    }
+
     initScrub(panel, sel);
     initKeyboard(panel, sel);
     initSpacingScrub(panel, sel);
@@ -2733,26 +5408,53 @@
     });
   }
 
+  // Map synthetic compact props (used by the Figma-style Layout controls)
+  // to the pair of real CSS properties they cover. Used by wireUpInputs so
+  // the input/change handlers apply to both sides and trackChange records
+  // each real property separately.
+  const COMPACT_PROP_PAIRS = {
+    'padding-x': ['padding-left', 'padding-right'],
+    'padding-y': ['padding-top',  'padding-bottom'],
+    'margin-x':  ['margin-left',  'margin-right'],
+    'margin-y':  ['margin-top',   'margin-bottom'],
+  };
+
   function wireUpInputs(panel, sel) {
     panel.querySelectorAll('.inspector-field input, .inspector-field-sm input').forEach(input => {
       if (input.dataset._wired) return;
       input.dataset._wired = '1';
       const prop = input.dataset.prop;
+      const pair = COMPACT_PROP_PAIRS[prop];
 
-      // `input` event = live preview while typing (no trackChange churn).
+      // Live preview while typing (no trackChange churn yet).
       input.addEventListener('input', (e) => {
         const value = cssValueFor(prop, e.target.value, unitFor(e.target));
         if (value == null) return;
-        if (selectedElement) selectedElement.style.setProperty(prop, value);
+        if (selectedElement) {
+          if (pair) pair.forEach(p => selectedElement.style.setProperty(p, value));
+          else      selectedElement.style.setProperty(prop, value);
+        }
       });
 
-      // `change` (blur/Enter) commits and records in trackChange.
+      // Commit on blur/Enter.
       input.addEventListener('change', (e) => {
-        const from = e.target.dataset.from;
         const value = cssValueFor(prop, e.target.value, unitFor(e.target));
         if (value == null) return;
-        if (selectedElement) selectedElement.style.setProperty(prop, value);
-        trackChange(sel, prop, from, value);
+        if (selectedElement) {
+          if (pair) pair.forEach(p => selectedElement.style.setProperty(p, value));
+          else      selectedElement.style.setProperty(prop, value);
+        }
+        if (pair) {
+          // Record each real side separately so the source-edit step can
+          // touch both. The compact field carries the original per-side
+          // values in data-from-a / data-from-b.
+          const fromA = e.target.dataset.fromA ?? e.target.dataset.from;
+          const fromB = e.target.dataset.fromB ?? e.target.dataset.from;
+          trackChange(sel, pair[0], fromA, value);
+          trackChange(sel, pair[1], fromB, value);
+        } else {
+          trackChange(sel, prop, e.target.dataset.from, value);
+        }
       });
     });
 
@@ -2819,7 +5521,11 @@
         const prop = input.dataset.prop;
         const cssValue = cssValueFor(prop, String(newVal), unit);
         if (selectedElement && prop && cssValue != null) {
-          selectedElement.style.setProperty(prop, cssValue);
+          // Synthetic compact props (padding-x / padding-y / margin-x /
+          // margin-y) expand to both real CSS sides.
+          const pair = COMPACT_PROP_PAIRS[prop];
+          if (pair) pair.forEach(p => selectedElement.style.setProperty(p, cssValue));
+          else      selectedElement.style.setProperty(prop, cssValue);
         }
       }
 
@@ -2831,10 +5537,19 @@
         suppressIframePointerEvents(false);
         if (input) {
           const prop = input.dataset.prop;
-          const from = input.dataset.from;
           const unit = unitFor(input);
           const cssValue = cssValueFor(prop, input.value, unit);
-          if (cssValue != null) trackChange(sel, prop, from, cssValue);
+          if (cssValue != null) {
+            const pair = COMPACT_PROP_PAIRS[prop];
+            if (pair) {
+              const fromA = input.dataset.fromA ?? input.dataset.from;
+              const fromB = input.dataset.fromB ?? input.dataset.from;
+              trackChange(sel, pair[0], fromA, cssValue);
+              trackChange(sel, pair[1], fromB, cssValue);
+            } else {
+              trackChange(sel, prop, input.dataset.from, cssValue);
+            }
+          }
           input = null;
         }
       }
@@ -3001,10 +5716,12 @@
 
     panel.innerHTML = `
       <textarea id="__inspector-css-raw" spellcheck="false">${rawText}</textarea>
-      <div class="inspector-section" style="border-top:1px solid #111;">
-        <div class="inspector-section-title">Apply raw edits</div>
-        <button id="__inspector-apply-raw" class="inspector-input" style="width:100%;cursor:pointer;text-align:center;padding:6px;">
-          Apply to tracker
+      <div class="inspector-raw-toolbar">
+        <button id="__inspector-apply-raw" class="inspector-raw-apply" data-tip="Parse the CSS above and record each declaration as a tracked change. The changes appear in the bottom drawer and ship to Claude in the Copy Prompt.">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 8 L6.5 11.5 L13 4"/>
+          </svg>
+          <span>Apply to tracker</span>
         </button>
       </div>
     `;
@@ -3029,12 +5746,17 @@
       setTimeout(() => { btn.textContent = 'Apply to tracker'; }, 2000);
     });
   }
+  function reorderEntries() {
+    return history.filter(h => h.kind === 'reorder');
+  }
+
   function renderChangesBar() {
     const bar = root.querySelector('#__inspector-changes-bar');
     const countEl = root.querySelector('#__inspector-bar-count');
     if (!bar) return;
 
-    const hasActivity = changes.length > 0 || redoStack.length > 0;
+    const totalCount = changes.length + componentIntents.length + reorderEntries().length;
+    const hasActivity = totalCount > 0 || redoStack.length > 0;
     if (!hasActivity) {
       bar.classList.remove('visible');
       const drawer = root.querySelector('#__inspector-bar-drawer');
@@ -3042,8 +5764,8 @@
     } else {
       bar.classList.add('visible');
       const pill = root.querySelector('#__inspector-changes-pill');
-      if (pill) pill.style.display = changes.length > 0 ? '' : 'none';
-      if (countEl && changes.length > 0) countEl.textContent = String(changes.length);
+      if (pill) pill.style.display = totalCount > 0 ? '' : 'none';
+      if (countEl) countEl.textContent = String(totalCount);
     }
 
     const drawer = root.querySelector('#__inspector-bar-drawer');
@@ -3071,21 +5793,100 @@
         </div>
       </div>`).join('');
 
+    // Component intents render in their own block under the CSS rows so the
+    // user can see exactly what variant swaps / conversions will be sent.
+    const intentRows = componentIntents.map((i, idx) => {
+      const label = i.action === 'swap-variant'
+        ? `${esc(i.component)} · ${esc(i.prop)}: ${esc(i.from || '—')} → ${esc(i.to)}`
+        : `Convert → ${esc(i.to)}`;
+      const sels = Array.isArray(i.selectors) ? i.selectors.join(', ') : (i.selector || '');
+      return `
+        <div class="changes-row changes-row-intent">
+          <div class="changes-row-top">
+            <span class="changes-row-selector">${esc(sels)}</span>
+            <button class="changes-row-rm" data-intent-index="${idx}">×</button>
+          </div>
+          <div class="changes-row-bottom">
+            <span class="changes-row-prop">component</span>
+            <div class="changes-row-values">${label}</div>
+          </div>
+        </div>`;
+    }).join('');
+
+    // Reorders live on `history` (not a separate array) — keep them
+    // grouped by parent so multiple nudges on the same list collapse
+    // visually into one row showing the net move.
+    const reordersByParent = new Map();
+    reorderEntries().forEach((h, hi) => {
+      const list = reordersByParent.get(h.parent) || [];
+      list.push({ h, hi });
+      reordersByParent.set(h.parent, list);
+    });
+    const reorderRows = Array.from(reordersByParent.entries()).map(([parent, entries]) => {
+      const first = entries[0].h;
+      const last = entries[entries.length - 1].h;
+      const netLabel = entries.length === 1
+        ? `${esc((first.child && first.child.text) || '—')} · ${first.from} → ${first.to}`
+        : `${esc((last.child && last.child.text) || '—')} · ${first.from} → ${last.to} (${entries.length} moves)`;
+      const lastHi = entries[entries.length - 1].hi;
+      return `
+        <div class="changes-row changes-row-intent">
+          <div class="changes-row-top">
+            <span class="changes-row-selector">${esc(parent || '—')}</span>
+            <button class="changes-row-rm" data-reorder-hi="${lastHi}">×</button>
+          </div>
+          <div class="changes-row-bottom">
+            <span class="changes-row-prop">reorder</span>
+            <div class="changes-row-values">${netLabel}</div>
+          </div>
+        </div>`;
+    }).join('');
+
+    const totalCount = changes.length + componentIntents.length + reorderEntries().length;
     drawer.innerHTML = `
       <div class="changes-drawer-hd">
         <div class="changes-drawer-hd-left">
-          <span class="changes-drawer-title">${changes.length} Change${changes.length !== 1 ? 's' : ''}</span>
+          <span class="changes-drawer-title">${totalCount} Change${totalCount !== 1 ? 's' : ''}</span>
           <span class="changes-drawer-pending">pending</span>
         </div>
         <button class="changes-drawer-close" title="Close">✕</button>
       </div>
       ${rows}
+      ${intentRows}
+      ${reorderRows}
       <button class="changes-bar-copy" id="__inspector-bar-copy">✦&nbsp; Copy Prompt for Claude</button>
     `;
 
-    drawer.querySelectorAll('.changes-row-rm').forEach(btn => {
+    drawer.querySelectorAll('.changes-row-rm[data-index]').forEach(btn => {
       btn.addEventListener('click', () => {
         undoChange(parseInt(btn.dataset.index));
+        renderChangesDrawer();
+      });
+    });
+    drawer.querySelectorAll('.changes-row-rm[data-intent-index]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const removed = componentIntents.splice(parseInt(btn.dataset.intentIndex), 1)[0];
+        if (removed) {
+          history.push({ kind: 'intent-remove', prev: removed });
+          redoStack.length = 0;
+        }
+        syncBadge();
+        renderChangesDrawer();
+      });
+    });
+    // X on a reorder row reverts the most-recent reorder for that
+    // parent (which is what `data-reorder-hi` points at). Each click
+    // pops one nudge; chained reorders unwind one at a time.
+    drawer.querySelectorAll('.changes-row-rm[data-reorder-hi]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const hi = parseInt(btn.dataset.reorderHi);
+        const h = history[hi];
+        if (h && h.kind === 'reorder') {
+          history.splice(hi, 1);
+          revertReorder(h);
+          redoStack.length = 0;
+        }
+        syncBadge();
         renderChangesDrawer();
       });
     });
@@ -3102,6 +5903,64 @@
         setTimeout(() => { btn.innerHTML = '✦&nbsp; Copy Prompt for Claude'; }, 2000);
       });
     });
+
+    // Hover-preview: show the full Copy Prompt text in a tooltip when
+    // the user hovers the Copy button or any of the change rows.
+    // Gives a "what's about to be sent to Claude" preview without
+    // making the user actually paste it.
+    const copyBtn = drawer.querySelector('#__inspector-bar-copy');
+    const hoverTargets = [copyBtn, ...drawer.querySelectorAll('.changes-row')];
+    hoverTargets.forEach(el => {
+      el.addEventListener('mouseenter', () => showPromptPreview(el));
+      el.addEventListener('mouseleave', hidePromptPreview);
+    });
+  }
+
+  // Tooltip element rendered into parent doc (above everything else).
+  // Lazy-created on first show.
+  let promptPreviewEl = null;
+  function ensurePromptPreview() {
+    if (promptPreviewEl) return promptPreviewEl;
+    promptPreviewEl = document.createElement('div');
+    promptPreviewEl.id = '__inspector-prompt-preview';
+    promptPreviewEl.style.cssText = [
+      'position:fixed', 'display:none',
+      'background:#0e0e0e', 'color:#d4d4d4',
+      'border:1px solid #2a2a2a', 'border-radius:8px',
+      'padding:12px 14px',
+      'font-family:Menlo,Monaco,Consolas,monospace', 'font-size:11px',
+      'line-height:1.5', 'white-space:pre-wrap', 'word-wrap:break-word',
+      'max-width:520px', 'max-height:340px', 'overflow:auto',
+      'box-shadow:0 8px 28px rgba(0,0,0,0.6)',
+      'z-index:2147483647', 'pointer-events:none',
+    ].join(';');
+    document.body.appendChild(promptPreviewEl);
+    return promptPreviewEl;
+  }
+  function showPromptPreview(anchor) {
+    const text = generateCopyPrompt();
+    if (!text || text === 'No changes to apply.') return;
+    const tip = ensurePromptPreview();
+    tip.textContent = text;
+    // Make it visible (offsetHeight needs the element to be rendered)
+    tip.style.display = 'block';
+
+    const ar = anchor.getBoundingClientRect();
+    const th = tip.offsetHeight;
+    const tw = tip.offsetWidth;
+    const vw = window.innerWidth, vh = window.innerHeight;
+
+    // Default: above the anchor, right-aligned to the anchor's right edge.
+    let left = Math.min(ar.right - tw, vw - tw - 8);
+    let top  = ar.top - th - 8;
+    if (top < 8) top = ar.bottom + 8;       // flip below if no room above
+    if (left < 8) left = 8;
+    if (top + th > vh - 8) top = vh - th - 8;
+    tip.style.left = left + 'px';
+    tip.style.top  = top  + 'px';
+  }
+  function hidePromptPreview() {
+    if (promptPreviewEl) promptPreviewEl.style.display = 'none';
   }
   function togglePickMode() {
     pickMode ? exitPickMode() : enterPickMode();
@@ -3128,6 +5987,7 @@
     targetDoc.querySelectorAll('.__inspector-highlight').forEach(el =>
       el.classList.remove('__inspector-highlight')
     );
+    hidePickHoverOverlay();
     tooltip.style.display = 'none';
     targetDoc.removeEventListener('mouseover', onPickHover, true);
     targetDoc.removeEventListener('click', onPickClick, true);
@@ -3135,11 +5995,15 @@
   }
 
   function onPickHover(e) {
+    // Guard against non-Element targets (text nodes, document, etc.)
+    // — closest/classList only exist on Elements.
+    if (!e.target || !e.target.classList) return;
     if (e.target.closest && e.target.closest('#__inspector-root')) return;
     targetDoc.querySelectorAll('.__inspector-highlight').forEach(el =>
       el.classList.remove('__inspector-highlight')
     );
     e.target.classList.add('__inspector-highlight');
+    showPickHoverOverlay(e.target);
     const rect = getFrameRect();
     tooltip.style.display = 'block';
     tooltip.style.left = (rect.left + e.clientX + 12) + 'px';
@@ -3158,7 +6022,7 @@
     return AREA_TAGS.has(el.tagName) ? 'area' : 'element';
   }
 
-  function copySelectionIntro() {
+  function copySelectionIntro(triggerBtn) {
     if (!selectedElement) return;
     const kind = elementKind(selectedElement);
     const sel = computeSelector(selectedElement);
@@ -3166,41 +6030,157 @@
     const intro = `Let's talk about this ${kind} \`${sel}\` (${tag}): `;
     if (!navigator.clipboard || !navigator.clipboard.writeText) return;
     navigator.clipboard.writeText(intro).then(() => {
-      const btn = root.querySelector('#__inspector-pill-copy');
+      const btn = triggerBtn || root.querySelector('.tree-copy-btn');
       if (!btn) return;
       btn.classList.add('just-copied');
       setTimeout(() => btn.classList.remove('just-copied'), 1500);
     });
   }
-  root.querySelector('#__inspector-pill-copy')
-      ?.addEventListener('click', copySelectionIntro);
+  // The chat-ready-intro copy action now lives inside the tree popup
+  // (`.tree-copy-btn`). The header's pill-clear button is wired below.
+  root.querySelector('#__inspector-pill-clear')
+      ?.addEventListener('click', () => clearSelection());
 
-  // First selection of the session: pulse the Copy button so the user
+  // First selection of the session: pulse the copy button so the user
   // discovers the chat handoff. Pulses only once per page load.
   let hasShownCopyHint = false;
 
-  function setSelection(el) {
-    selectedElement = el;
-    root.querySelector('#__inspector-pick-btn').classList.add('has-selection');
-    root.querySelector('#__inspector-header').classList.add('has-selection');
-    root.querySelector('#__inspector-selector-pill').textContent = computeSelector(el);
-    if (!hasShownCopyHint) {
-      hasShownCopyHint = true;
-      const btn = root.querySelector('#__inspector-pill-copy');
-      if (btn) {
-        btn.classList.add('first-hint');
-        // Remove the class after the animation so re-adding it later works.
-        setTimeout(() => btn.classList.remove('first-hint'), 3200);
-      }
+  // The list of all currently-picked elements (primary + extras). Centralized
+  // so panels and intent emitters don't have to know about multi-pick state.
+  function allSelected() {
+    return selectedElement ? [selectedElement, ...selectedElements] : [];
+  }
+
+  // Toggle the selected-outline class on every currently-picked element
+  // based on settings.showSelectedOutline. Called by the row checkbox.
+  function applySelectedOutlineVisibility() {
+    const on = !!settings.showSelectedOutline;
+    const picks = allSelected();
+    if (on) {
+      picks.forEach(p => p.classList.add('__inspector-selected-highlight'));
+    } else {
+      targetDoc.querySelectorAll('.__inspector-selected-highlight').forEach(n =>
+        n.classList.remove('__inspector-selected-highlight')
+      );
     }
   }
 
+  function setSelection(el) {
+    // Drop any previous persistent highlight before tagging the new pick.
+    // In multi-pick mode the previous primary stays selected — it just
+    // moves into the `selectedElements` extras list.
+    if (multiPickMode) {
+      if (selectedElement && selectedElement !== el && !selectedElements.includes(selectedElement)) {
+        selectedElements.push(selectedElement);
+      }
+    } else {
+      targetDoc.querySelectorAll('.__inspector-selected-highlight').forEach(n =>
+        n.classList.remove('__inspector-selected-highlight')
+      );
+      selectedElements = [];
+    }
+    selectedElement = el;
+    if (settings.showSelectedOutline) el.classList.add('__inspector-selected-highlight');
+    root.querySelector('#__inspector-pick-btn').classList.add('has-selection');
+    root.querySelector('#__inspector-header').classList.add('has-selection');
+    const count = allSelected().length;
+    root.querySelector('#__inspector-selector-pill').textContent =
+      count > 1 ? `${count} selected` : computeSelector(el);
+    renderMultiBadges();
+    // Refresh the design panel so the Component section reflects the new
+    // selection set (single vs multi, same vs mixed types). The existing
+    // single-pick onPickClick path also calls switchTab('design') which
+    // re-renders; multi-pick stays in pick mode so we need this explicitly.
+    renderDesignPanel();
+    renderSelectionOverlays();
+    positionFabs();
+    // First-pick pulse: the copy link lives in the tree popup now, so the
+    // pulse is applied lazily — next time the popup renders, the link
+    // animation runs once. We just flip the flag here and let the popup
+    // render path pick it up.
+    if (!hasShownCopyHint) hasShownCopyHint = true;
+  }
+
   function clearSelection() {
+    targetDoc.querySelectorAll('.__inspector-selected-highlight').forEach(n =>
+      n.classList.remove('__inspector-selected-highlight')
+    );
     selectedElement = null;
+    selectedElements = [];
+    renderMultiBadges();
     root.querySelector('#__inspector-pick-btn').classList.remove('has-selection');
     root.querySelector('#__inspector-header').classList.remove('has-selection');
     root.querySelector('#__inspector-selector-pill').textContent = '—';
     renderDesignPanel();
+    renderSelectionOverlays();
+    positionFabs();
+  }
+
+  // Remove a single element from the multi-pick set. If it was the
+  // primary, promote the last-added extra to primary so something is
+  // still selected; if nothing's left, fall through to clearSelection.
+  function removeFromSelection(el) {
+    if (!el) return;
+    el.classList.remove('__inspector-selected-highlight');
+    if (el === selectedElement) {
+      selectedElement = selectedElements.length ? selectedElements.pop() : null;
+    } else {
+      const idx = selectedElements.indexOf(el);
+      if (idx >= 0) selectedElements.splice(idx, 1);
+    }
+    if (!selectedElement) {
+      clearSelection();
+      return;
+    }
+    const count = allSelected().length;
+    root.querySelector('#__inspector-selector-pill').textContent =
+      count > 1 ? `${count} selected` : computeSelector(selectedElement);
+    renderMultiBadges();
+    renderDesignPanel();
+  }
+
+  // Numbered badges floating near each picked element. They live in the
+  // outer document and are positioned in fixed coords; we recompute on
+  // scroll/resize so they stay glued to their targets.
+  function renderMultiBadges() {
+    // Tear down existing badges first.
+    multiBadges.forEach(b => b.remove());
+    multiBadges = [];
+    const els = allSelected();
+    if (els.length < 2) return; // Single pick: no numbering needed.
+    const frame = getFrameRect();
+    els.forEach((el, i) => {
+      const rect = el.getBoundingClientRect();
+      const badge = document.createElement('div');
+      badge.className = '__inspector-multi-badge';
+      badge.textContent = String(i + 1);
+      const top  = Math.max(2, frame.top  + rect.top  - 8);
+      const left = Math.max(2, frame.left + rect.left - 8);
+      badge.style.top  = top  + 'px';
+      badge.style.left = left + 'px';
+      document.body.appendChild(badge);
+      multiBadges.push(badge);
+    });
+  }
+  window.addEventListener('scroll', renderMultiBadges, true);
+  window.addEventListener('resize', renderMultiBadges);
+
+  function setMultiPickMode(on) {
+    multiPickMode = !!on;
+    const btn = root.querySelector('#__inspector-multi-btn');
+    btn?.classList.toggle('active', multiPickMode);
+    btn?.setAttribute('aria-pressed', multiPickMode ? 'true' : 'false');
+    if (!multiPickMode) {
+      // Leaving multi mode collapses to just the primary; extras lose their
+      // highlight so the UI doesn't mislead.
+      selectedElements.forEach(el => el.classList.remove('__inspector-selected-highlight'));
+      selectedElements = [];
+      renderMultiBadges();
+      // Refresh pill text now that count is back to 1.
+      if (selectedElement) {
+        root.querySelector('#__inspector-selector-pill').textContent = computeSelector(selectedElement);
+      }
+    }
   }
 
   function onPickRightClick(e) {
@@ -3218,7 +6198,18 @@
     if (e.target.closest('#__inspector-root')) return;
     e.preventDefault();
     e.stopPropagation();
+    // Multi-pick: clicking an already-selected element removes it from
+    // the set instead of adding a duplicate.
+    if (multiPickMode && allSelected().includes(e.target)) {
+      removeFromSelection(e.target);
+      // Stay in pick mode so the user can keep adding/removing.
+      return;
+    }
     setSelection(e.target);
+    if (multiPickMode) {
+      // Stay in pick mode for the next click.
+      return;
+    }
     exitPickMode();
     switchTab('design');
   }

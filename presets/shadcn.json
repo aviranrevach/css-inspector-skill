@@ -1,0 +1,64 @@
+{
+  "$schema": "https://github.com/aviranrevach/css-inspector-skill/presets/schema.json",
+  "system": "shadcn",
+  "label": "shadcn/ui",
+  "description": "Radix-based component library with cva-driven variants. Distributed by copying source into your project (usually src/components/ui/*).",
+  "components": [
+    {
+      "name": "Button",
+      "source": "src/components/ui/button.tsx",
+      "match": {
+        "tag": "button",
+        "anyClassContains": [
+          "bg-primary",
+          "bg-destructive",
+          "bg-secondary",
+          "border-input",
+          "hover:bg-accent",
+          "underline-offset-4"
+        ]
+      },
+      "props": {
+        "variant": {
+          "values": ["default", "destructive", "outline", "secondary", "ghost", "link"],
+          "default": "default",
+          "detect": [
+            { "if": "bg-destructive",       "value": "destructive" },
+            { "if": "border-input",         "value": "outline"     },
+            { "if": "bg-secondary",         "value": "secondary"   },
+            { "if": "underline-offset-4",   "value": "link"        },
+            { "if": "hover:bg-accent",      "value": "ghost"       },
+            { "if": "bg-primary",           "value": "default"     }
+          ]
+        },
+        "size": {
+          "values": ["default", "sm", "lg", "icon"],
+          "default": "default",
+          "detect": [
+            { "if": "w-9",   "value": "icon"    },
+            { "if": "h-8",   "value": "sm"      },
+            { "if": "h-11",  "value": "lg"      },
+            { "if": "h-10",  "value": "default" }
+          ]
+        }
+      }
+    }
+  ],
+  "conversions": [
+    {
+      "from": "Button",
+      "minCount": 2,
+      "to": "ToggleGroup",
+      "label": "Group as ToggleGroup",
+      "note": "Converts N adjacent Buttons into a Radix ToggleGroup with one ToggleGroupItem per source button."
+    },
+    {
+      "from": "Button",
+      "minCount": 1,
+      "maxCount": 1,
+      "to": "IconButton",
+      "label": "Convert to IconButton (size='icon')",
+      "note": "Sets variant='ghost' size='icon' and removes the visible label, leaving only the inner icon."
+    }
+  ]
+}
