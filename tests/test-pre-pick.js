@@ -130,3 +130,32 @@ test('effectiveBackground walks ancestors until non-transparent', () => {
   const allTransparent = { parentElement: null, _bg: 'transparent' };
   assert.equal(effectiveBackground(getStyle, allTransparent), 'rgb(255, 255, 255)');
 });
+
+test('layoutNonDefaults returns only non-default layout props, or null', () => {
+  const { layoutNonDefaults } = load();
+  // All defaults → null
+  assert.equal(layoutNonDefaults({
+    position: 'static', overflow: 'visible', zIndex: 'auto',
+    transform: 'none', maxWidth: 'none',
+  }), null);
+  // Position relative + overflow hidden
+  assert.deepEqual(layoutNonDefaults({
+    position: 'relative', overflow: 'hidden', zIndex: 'auto',
+    transform: 'none', maxWidth: 'none',
+  }), { position: 'relative', overflow: 'hidden' });
+  // Numeric zIndex
+  assert.deepEqual(layoutNonDefaults({
+    position: 'absolute', overflow: 'visible', zIndex: '10',
+    transform: 'none', maxWidth: 'none',
+  }), { position: 'absolute', zIndex: '10' });
+  // Transform set
+  assert.deepEqual(layoutNonDefaults({
+    position: 'static', overflow: 'visible', zIndex: 'auto',
+    transform: 'matrix(1, 0, 0, 1, 0, 0)', maxWidth: 'none',
+  }), { transform: 'matrix(1, 0, 0, 1, 0, 0)' });
+  // maxWidth set
+  assert.deepEqual(layoutNonDefaults({
+    position: 'static', overflow: 'visible', zIndex: 'auto',
+    transform: 'none', maxWidth: '600px',
+  }), { maxWidth: '600px' });
+});

@@ -110,9 +110,19 @@
     return 'rgb(255, 255, 255)';
   }
 
+  function layoutNonDefaults(style) {
+    if (!style) return null;
+    const out = {};
+    if (style.position && style.position !== 'static')         out.position  = style.position;
+    if (style.overflow && style.overflow !== 'visible')        out.overflow  = style.overflow;
+    if (style.zIndex   && style.zIndex   !== 'auto')           out.zIndex    = style.zIndex;
+    if (style.transform && style.transform !== 'none')         out.transform = style.transform;
+    if (style.maxWidth && style.maxWidth !== 'none')           out.maxWidth  = style.maxWidth;
+    return Object.keys(out).length === 0 ? null : out;
+  }
 
   if (typeof module !== 'undefined') {
-    module.exports = { computeSelector, typeIconKey, headingLevel, isTextBearing, closestChildIndex, contrastRatio, wcagBadge, effectiveBackground };
+    module.exports = { computeSelector, typeIconKey, headingLevel, isTextBearing, closestChildIndex, contrastRatio, wcagBadge, effectiveBackground, layoutNonDefaults };
   }
 
   // ── Browser-only from here ────────────────────────────────────────────────
