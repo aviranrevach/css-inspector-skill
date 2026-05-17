@@ -2354,6 +2354,40 @@
     if (padding.right  > 0) ppRoot.appendChild(_bandDiv('padding', bands.paddingRight,  padding.right));
     if (padding.bottom > 0) ppRoot.appendChild(_bandDiv('padding', bands.paddingBottom, padding.bottom));
     if (padding.left   > 0) ppRoot.appendChild(_bandDiv('padding', bands.paddingLeft,   padding.left));
+
+    // Gap strips — only when display is flex/grid and gap is non-zero.
+    const display = cs.display;
+    const gap = _parsePx(cs.gap);
+    const isRow = /^row/.test(cs.flexDirection || 'row');
+    if (gap > 0 && (display.includes('flex') || display.includes('grid'))) {
+      const kids = Array.from(target.children);
+      const childRects = kids.map(k => {
+        const kr = k.getBoundingClientRect();
+        return {
+          left:  kr.left  + dx,
+          top:   kr.top   + dy,
+          right: kr.right + dx,
+          bottom:kr.bottom+ dy,
+          width: kr.width,
+          height:kr.height,
+        };
+      });
+      const strips = gapStripsForFlexRow(box, childRects, gap, isRow ? 'row' : 'column');
+      for (const s of strips) ppRoot.appendChild(_bandDiv('gap', s, s.value));
+    }
+
+    // Parent outline — faint dotted ring around the parent box.
+    const parent = target.parentElement;
+    if (parent && parent.tagName && parent.tagName.toUpperCase() !== 'HTML') {
+      const pr = parent.getBoundingClientRect();
+      const po = document.createElement('div');
+      po.className = '__inspector-pp-parent';
+      po.style.cssText = `left:${pr.left + dx}px;top:${pr.top + dy}px;width:${pr.width}px;height:${pr.height}px;`;
+      const pcls = Array.from(parent.classList || []).filter(c => c && !c.startsWith('__inspector'))[0];
+      const plabel = parent.tagName.toLowerCase() + (pcls ? '.' + pcls : '') + ' · parent';
+      po.setAttribute('data-label', plabel);
+      ppRoot.appendChild(po);
+    }
   }
 
   // HTML-escape helper, reused across renderers.

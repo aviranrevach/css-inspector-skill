@@ -64,3 +64,18 @@ test('hovering a row paints 4 margin bands and 4 padding bands', async ({ page }
   await expect(page.locator('.__inspector-pp-band.margin')).toHaveCount(4);
   await expect(page.locator('.__inspector-pp-band.padding')).toHaveCount(4);
 });
+
+test('hovering a flex row paints gap strips between cells', async ({ page }) => {
+  await enterPickMode(page);
+  const target = await page.frameLocator('iframe').locator('[data-pp-test="row"]').boundingBox();
+  await page.mouse.move(target.x + 10, target.y + 7);
+  // 3 cells with gap 10 → 2 strips.
+  await expect(page.locator('.__inspector-pp-band.gap')).toHaveCount(2);
+});
+
+test('hovering a row paints a faint parent outline above', async ({ page }) => {
+  await enterPickMode(page);
+  const target = await page.frameLocator('iframe').locator('[data-pp-test="row"]').boundingBox();
+  await page.mouse.move(target.x + 10, target.y + 7);
+  await expect(page.locator('.__inspector-pp-parent')).toHaveCount(1);
+});
