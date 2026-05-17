@@ -69,8 +69,50 @@
     return bestIdx;
   }
 
+
+  // sRGB → relative luminance per WCAG 2.1.
+  function _relLuminance(rgb) {
+    const a = rgb.map(v => {
+      v /= 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
+  }
+
+  function contrastRatio(fgRgb, bgRgb) {
+    const l1 = _relLuminance(fgRgb);
+    const l2 = _relLuminance(bgRgb);
+    const [lighter, darker] = l1 > l2 ? [l1, l2] : [l2, l1];
+    return (lighter + 0.05) / (darker + 0.05);
+  }
+
+  function wcagBadge(ratio, fontPx, fontWeight) {
+    const large = (fontPx >= 18) || (fontPx >= 14 && (fontWeight | 0) >= 700);
+    if (large) {
+      if (ratio >= 4.5) return 'AAA';
+      if (ratio >= 3)   return 'AA-large';
+      return 'FAIL';
+    }
+    if (ratio >= 7)   return 'AAA';
+    if (ratio >= 4.5) return 'AA';
+    return 'FAIL';
+  }
+
+  function effectiveBackground(getStyle, el) {
+    let cur = el;
+    while (cur) {
+      const bg = getStyle(cur).backgroundColor;
+      if (bg && bg !== 'transparent' && !/rgba\([^)]*,\s*0\s*\)$/.test(bg)) {
+        return bg;
+      }
+      cur = cur.parentElement;
+    }
+    return 'rgb(255, 255, 255)';
+  }
+
+
   if (typeof module !== 'undefined') {
-    module.exports = { computeSelector, typeIconKey, headingLevel, isTextBearing, closestChildIndex };
+    module.exports = { computeSelector, typeIconKey, headingLevel, isTextBearing, closestChildIndex, contrastRatio, wcagBadge, effectiveBackground };
   }
 
   // ── Browser-only from here ────────────────────────────────────────────────

@@ -93,3 +93,40 @@ test('closestChildIndex returns the child closest to cursor by center distance',
   // Out-of-bounds cursor still picks closest child by Euclidean distance.
   assert.equal(closestChildIndex(rects, { x: 1000, y: -1000 }), 2);
 });
+
+test('contrastRatio matches known WCAG examples', () => {
+  const { contrastRatio } = load();
+  // Black on white = 21:1 (the maximum).
+  assert.ok(Math.abs(contrastRatio([0,0,0], [255,255,255]) - 21) < 0.05);
+  // White on white = 1:1.
+  assert.ok(Math.abs(contrastRatio([255,255,255], [255,255,255]) - 1) < 0.001);
+  // #3B82F6 (blue) on white ≈ 3.68.
+  const r = contrastRatio([0x3b,0x82,0xf6], [255,255,255]);
+  assert.ok(r > 3.6 && r < 3.7, `expected ~3.68, got ${r}`);
+});
+
+test('wcagBadge maps ratio + text size to AAA/AA/AA-large/FAIL', () => {
+  const { wcagBadge } = load();
+  // Normal body text (14px / 400)
+  assert.equal(wcagBadge(7.1, 14, 400), 'AAA');
+  assert.equal(wcagBadge(4.6, 14, 400), 'AA');
+  assert.equal(wcagBadge(3.0, 14, 400), 'FAIL');
+  // Large text (≥18px / 400 OR ≥14px / 700) is graded more leniently
+  assert.equal(wcagBadge(4.6, 24, 400), 'AAA');
+  assert.equal(wcagBadge(3.1, 24, 400), 'AA-large');
+  assert.equal(wcagBadge(2.9, 24, 400), 'FAIL');
+  assert.equal(wcagBadge(3.5, 14, 700), 'AA-large');
+});
+
+test('effectiveBackground walks ancestors until non-transparent', () => {
+  const { effectiveBackground } = load();
+  // Mock element tree: leaf has transparent bg, parent has white bg.
+  const root = { parentElement: null, _bg: 'rgb(255, 255, 255)' };
+  const mid  = { parentElement: root, _bg: 'rgba(0, 0, 0, 0)' };
+  const leaf = { parentElement: mid,  _bg: 'transparent' };
+  const getStyle = (el) => ({ backgroundColor: el._bg });
+  assert.equal(effectiveBackground(getStyle, leaf), 'rgb(255, 255, 255)');
+  // If everything is transparent, fall back to white.
+  const allTransparent = { parentElement: null, _bg: 'transparent' };
+  assert.equal(effectiveBackground(getStyle, allTransparent), 'rgb(255, 255, 255)');
+});
