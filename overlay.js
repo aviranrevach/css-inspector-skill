@@ -1684,6 +1684,190 @@
     .inspector-sv.modified input {
       color: #DA7756;
     }
+
+/* ────── Pre-pick layers ────── */
+.__inspector-pp-band {
+  position: fixed; pointer-events: none;
+  z-index: 2147483640;
+  display: flex; align-items: center; justify-content: center;
+  font: 600 9px Inter, system-ui, sans-serif;
+}
+.__inspector-pp-band.margin    { background: rgba(249,115,22,0.22); color: #c2410c; }
+.__inspector-pp-band.padding   { background: rgba(34,197,94,0.20);  color: #15803d; }
+.__inspector-pp-band.gap       {
+  background:
+    repeating-linear-gradient(135deg,
+      rgba(168,85,247,0.22) 0 4px,
+      rgba(168,85,247,0.10) 4px 8px);
+  color: #6d28d9;
+}
+.__inspector-pp-band .lbl {
+  padding: 1px 5px; border-radius: 3px; background: rgba(255,255,255,0.95);
+}
+.__inspector-pp-parent {
+  position: fixed; pointer-events: none;
+  border: 1px dotted #cbd5e1;
+  border-radius: 6px;
+  z-index: 2147483639;
+}
+.__inspector-pp-parent::before {
+  content: attr(data-label);
+  position: absolute; top: -10px; left: 8px;
+  background: #ffffff;
+  padding: 0 6px;
+  font: 600 9px Inter, system-ui, sans-serif;
+  color: #94a3b8;
+}
+.__inspector-pp-child {
+  position: fixed; pointer-events: none;
+  border: 1px dashed rgba(59,130,246,0.55);
+  border-radius: 4px;
+  z-index: 2147483641;
+}
+.__inspector-pp-child .tag {
+  position: absolute; top: -10px; left: 4px;
+  background: #eff6ff;
+  border: 1px solid rgba(59,130,246,0.25);
+  color: #1d4ed8;
+  font: 600 9px Inter, system-ui, sans-serif;
+  padding: 1px 5px; border-radius: 3px;
+}
+.__inspector-pp-child .size {
+  position: absolute; bottom: -10px; right: 4px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  font: 400 9px Inter, system-ui, sans-serif;
+  padding: 1px 5px; border-radius: 3px;
+  opacity: 0; transition: opacity 0.4s ease-out;
+}
+.__inspector-pp-root.dwell .__inspector-pp-child .size { opacity: 1; }
+.__inspector-pp-child.near {
+  border-style: solid;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px #2563eb;
+}
+.__inspector-pp-chevron {
+  position: fixed; pointer-events: none;
+  color: #3b82f6;
+  font: 700 14px Inter, system-ui, sans-serif;
+  z-index: 2147483642;
+}
+.__inspector-pp-breadcrumb {
+  position: fixed; pointer-events: none;
+  font: 400 9px Inter, system-ui, sans-serif;
+  color: #94a3b8;
+  z-index: 2147483643;
+  opacity: 0; transition: opacity 0.4s ease-out;
+}
+.__inspector-pp-breadcrumb b { color: #64748b; }
+.__inspector-pp-root.dwell .__inspector-pp-breadcrumb { opacity: 1; }
+.__inspector-pp-ladder {
+  position: fixed; bottom: 14px; right: 14px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(15,23,42,0.08);
+  padding: 6px 8px;
+  font: 400 10px Inter, system-ui, sans-serif;
+  color: #475569;
+  display: flex; align-items: center; gap: 6px;
+  z-index: 2147483644;
+  opacity: 0; transition: opacity 0.4s ease-out;
+  pointer-events: none;
+}
+.__inspector-pp-root.dwell .__inspector-pp-ladder { opacity: 1; }
+.__inspector-pp-ladder kbd {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 1px 4px;
+  font: 600 9px ui-monospace, Menlo, monospace;
+  color: #0f172a;
+}
+.__inspector-pp-dwell-ring {
+  position: fixed;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  border: 1.5px solid #cbd5e1;
+  border-top-color: #3b82f6;
+  border-right-color: #3b82f6;
+  animation: __inspector-pp-spin 2s linear infinite;
+  opacity: .65;
+  z-index: 2147483643;
+  pointer-events: none;
+}
+@keyframes __inspector-pp-spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+
+/* ────── Rich tooltip — replaces the simple text tooltip ────── */
+#__inspector-tooltip.rich {
+  background: #ffffff;
+  border: 1px solid #e6e8eb;
+  border-radius: 7px;
+  box-shadow: 0 8px 22px rgba(15,23,42,0.10);
+  padding: 8px 10px;
+  font: 400 11px Inter, system-ui, sans-serif;
+  color: #1f2937;
+  max-width: 280px;
+  line-height: 1.45;
+}
+#__inspector-tooltip.rich .pp-title {
+  display: grid; grid-template-columns: 18px auto 1fr;
+  align-items: center; gap: 6px;
+  margin-bottom: 4px;
+}
+#__inspector-tooltip.rich .pp-title .icon { width: 14px; height: 14px; color: #3b82f6; }
+#__inspector-tooltip.rich .pp-title .tag  { color: #7c3aed; font-weight: 700; font-size: 12px; }
+#__inspector-tooltip.rich .pp-title .size { color: #0f172a; text-align: right; font-weight: 500; }
+#__inspector-tooltip.rich .pp-title .glyph-text {
+  font: 700 10px ui-monospace, "SF Mono", Menlo, monospace;
+  background: #eff6ff;
+  border: 1px solid rgba(59,130,246,0.30);
+  border-radius: 3px;
+  color: #1d4ed8;
+  padding: 0 3px;
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 16px;
+}
+#__inspector-tooltip.rich .pp-kv {
+  display: grid; grid-template-columns: 86px 1fr;
+  column-gap: 8px; padding: 1px 0;
+}
+#__inspector-tooltip.rich .pp-kv .k { color: #64748b; }
+#__inspector-tooltip.rich .pp-kv .v { color: #0f172a; text-align: right; }
+#__inspector-tooltip.rich .pp-kv .v.muted { color: #94a3b8; }
+#__inspector-tooltip.rich .pp-section {
+  display: grid; grid-template-columns: 11px auto 1fr;
+  align-items: center; gap: 5px;
+  margin-top: 8px; margin-bottom: 2px;
+}
+#__inspector-tooltip.rich .pp-section svg { width: 10px; height: 10px; color: #94a3b8; }
+#__inspector-tooltip.rich .pp-section .label {
+  font: 700 9px Inter, system-ui, sans-serif;
+  color: #94a3b8;
+  letter-spacing: .1em;
+}
+#__inspector-tooltip.rich .pp-section .rule { height: 1px; background: #e6e8eb; }
+#__inspector-tooltip.rich .pp-swatch {
+  display: inline-block; width: 9px; height: 9px;
+  border-radius: 2px; margin-right: 5px;
+  border: 1px solid rgba(15,23,42,0.08);
+  vertical-align: -1px;
+}
+#__inspector-tooltip.rich .pp-aa {
+  display: inline-block;
+  border: 1px solid #cbd5e1;
+  border-radius: 3px;
+  padding: 0 4px;
+  font: 500 10px Inter, system-ui, sans-serif;
+  color: #0f172a;
+  margin-right: 5px;
+  background: #ffffff;
+}
+#__inspector-tooltip.rich .pp-ok   { color: #16a34a; font-weight: 700; }
+#__inspector-tooltip.rich .pp-warn { color: #f97316; font-weight: 700; margin-left: 4px; }
+#__inspector-tooltip.rich .pp-no   { color: #94a3b8; font-size: 13px; vertical-align: -1px; }
   `;
 
   // ── Inject styles ──────────────────────────────────────────────────────────
@@ -2053,6 +2237,56 @@
   const tooltip = document.createElement('div');
   tooltip.id = '__inspector-tooltip';
   document.body.appendChild(tooltip);
+
+  // SVG icon sprite for pre-pick tooltips. One <svg> with hidden <symbol>s
+  // is appended to the document so any element can `<use href="#i-...">` it.
+  const sprite = document.createElement('div');
+  sprite.id = '__inspector-pp-sprite';
+  sprite.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden;';
+  sprite.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <symbol id="i-block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+        </symbol>
+        <symbol id="i-inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/>
+        </symbol>
+        <symbol id="i-button" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="8" width="18" height="9" rx="3"/><circle cx="9" cy="12.5" r="1"/>
+        </symbol>
+        <symbol id="i-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 1 0-7.07-7.07L11 5"/>
+          <path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 1 0 7.07 7.07L13 19"/>
+        </symbol>
+        <symbol id="i-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/>
+          <path d="m21 15-5-5L5 21"/>
+        </symbol>
+        <symbol id="i-input" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="6" width="18" height="12" rx="2"/><line x1="7" y1="10" x2="7" y2="14"/>
+        </symbol>
+        <symbol id="i-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/>
+          <circle cx="4.5" cy="6" r="1.5"/><circle cx="4.5" cy="12" r="1.5"/><circle cx="4.5" cy="18" r="1.5"/>
+        </symbol>
+        <symbol id="i-nav" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/>
+        </symbol>
+        <symbol id="s-a11y" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="5" r="1.5"/><path d="M8 9h8"/><path d="M12 9v6"/><path d="M9 21l3-6 3 6"/>
+        </symbol>
+        <symbol id="s-layout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="9" x2="9" y2="21"/>
+        </symbol>
+        <symbol id="s-content" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="15" y2="12"/><line x1="4" y1="18" x2="18" y2="18"/>
+        </symbol>
+      </defs>
+    </svg>
+  `;
+  document.body.appendChild(sprite);
 
   // HTML-escape helper, reused across renderers.
   const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
