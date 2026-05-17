@@ -10,6 +10,10 @@ Built by Aviran Revach · [GitHub](https://github.com/aviranrevach)\
 
 ---
 
+![Hero — element picked with the inspector panel open](docs/screenshots/01-hero.png)
+
+---
+
 ## What it does
 
 Two things in one panel: **inspect any element visually**, then **hand the changes off to Claude cleanly**.
@@ -73,6 +77,83 @@ Click the selector pill in the header → click **Copy chat-ready intro**. Lands
 > `Looking at .row.header (a <div>) on Insights → Product Items · Concepts · /insights-prototype.html. Ancestors: .stage > .frame > .splitG > .list-wrap > .listG. Children: 6 (.row-mark, .title-cell, .cell-stack, .cell-stack, .status-cell, .arr-cell).`
 
 Paste into Claude, then type your actual question. Claude has enough hooks to find the right file and the right element before you've even finished asking.
+
+---
+
+## Screenshots
+
+<table>
+<tr>
+<td width="50%">
+
+**Design panel — picked element + component identified**
+
+The right-side dock with the Design tab open. Selector pill, **Component identified** badge (when the manifest matches), all the visual controls — Position, Layout, Padding, Appearance, plus the Hide / Delete split button at the bottom.
+
+</td>
+<td width="50%">
+
+<img src="docs/screenshots/02-component-variants.png" alt="Inspector panel showing Design tab with Component identified and visual controls">
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+**Sibling reorder — pink grippers + gap bars**
+
+Pick an element with siblings, hover outside to promote the armed level to its parent, and the inspector shows hollow pink grip-circles on each child plus thin pink gap indicators between them. Arrow keys nudge; drag commits to a new position.
+
+</td>
+<td width="50%">
+
+<img src="docs/screenshots/05-reorder-grippers.png" alt="Pink reorder grippers and gap bars between four KPI cards">
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+**Changes drawer — mixed change types**
+
+CSS edits, variant swaps, sibling reorders, and element removals all accumulate in one drawer. Each row has its own X for individual undo; the coral **Copy Prompt for Claude** button at the bottom packages the lot.
+
+</td>
+<td width="50%">
+
+<img src="docs/screenshots/03-changes-drawer.png" alt="Changes drawer showing 4 pending edits including a reorder">
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+**Chat-ready intro — element tree popup**
+
+Click the selector pill → tree popup opens with the ancestor chain, the picked element highlighted, and the siblings. The **Copy chat-ready intro** link puts a one-line context paragraph on your clipboard for ad-hoc Claude questions.
+
+</td>
+<td width="50%">
+
+<img src="docs/screenshots/04-chat-ready-intro.png" alt="Element tree popup with parents, selected, and siblings + Copy chat-ready intro link">
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+**Copy Prompt preview — what Claude actually receives**
+
+Hover the Copy Prompt button (or any drawer row) to preview the structured prompt before it lands on your clipboard. Page context up top, human bullets, then `<changes>` / `<components>` / `<reorders>` / `<removals>` JSON blocks for Claude to apply precisely.
+
+</td>
+<td width="50%">
+
+<img src="docs/screenshots/06-copy-prompt-preview.png" alt="Syntax-highlighted preview tooltip showing the Copy Prompt content">
+
+</td>
+</tr>
+</table>
 
 ---
 
