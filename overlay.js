@@ -2433,7 +2433,18 @@
       return { left: kr.left, top: kr.top, right: kr.right, bottom: kr.bottom, width: kr.width, height: kr.height };
     });
     const idx = closestChildIndex(childRects, { x: cx, y: cy });
-    kids.forEach((node, i) => node.classList.toggle('near', i === idx));
+    kids.forEach((node, i) => {
+      const existing = node.querySelector('.dot');
+      if (i === idx) {
+        if (!existing) {
+          const dot = document.createElement('div');
+          dot.className = 'dot';
+          node.appendChild(dot);
+        }
+      } else if (existing) {
+        existing.remove();
+      }
+    });
   }
 
   function renderPrePickLayers(target) {
