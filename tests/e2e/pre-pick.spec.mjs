@@ -151,3 +151,12 @@ test('hovering a row with all default layout omits the LAYOUT section', async ({
   const tip = page.locator('#__inspector-tooltip');
   await expect(tip).not.toContainText('LAYOUT');
 });
+
+test('CONTENT section shows child count for a row', async ({ page }) => {
+  await enterPickMode(page);
+  const target = await page.frameLocator('iframe').locator('[data-pp-test="row"]').boundingBox();
+  await page.mouse.move(target.x + 10, target.y + 7);
+  const tip = page.locator('#__inspector-tooltip');
+  await expect(tip).toContainText('CONTENT');
+  await expect(tip).toContainText('3 children');
+});

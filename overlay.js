@@ -2603,6 +2603,8 @@
     html += _sectionHtml('ACCESSIBILITY', 's-a11y', a11yRows);
     const layoutRows = _layoutRows(cs);
     html += _sectionHtml('LAYOUT', 's-layout', layoutRows);
+    const summary = contentSummary(target);
+    html += _sectionHtml('CONTENT', 's-content', [{ k: 'Shape', v: _esc(summary) }]);
     tooltip.innerHTML = html;
     tooltip.style.display = 'block';
   }
