@@ -53,8 +53,24 @@
     return false;
   }
 
+  function closestChildIndex(rects, cursor) {
+    if (!rects || rects.length === 0) return -1;
+    let bestIdx = -1;
+    let bestDist = Infinity;
+    for (let i = 0; i < rects.length; i++) {
+      const r = rects[i];
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+      const dx = cx - cursor.x;
+      const dy = cy - cursor.y;
+      const d2 = dx * dx + dy * dy; // squared distance is enough for ranking
+      if (d2 < bestDist) { bestDist = d2; bestIdx = i; }
+    }
+    return bestIdx;
+  }
+
   if (typeof module !== 'undefined') {
-    module.exports = { computeSelector, typeIconKey, headingLevel, isTextBearing };
+    module.exports = { computeSelector, typeIconKey, headingLevel, isTextBearing, closestChildIndex };
   }
 
   // ── Browser-only from here ────────────────────────────────────────────────

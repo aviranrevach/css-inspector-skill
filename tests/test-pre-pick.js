@@ -74,3 +74,22 @@ test('isTextBearing detects non-empty direct text node children', () => {
   assert.equal(isTextBearing(null), false);
   assert.equal(isTextBearing(undefined), false);
 });
+
+test('closestChildIndex returns the child closest to cursor by center distance', () => {
+  const { closestChildIndex } = load();
+  // Three cells in a row, each 100x100, separated by 0px gap.
+  const rects = [
+    { left:   0, top: 0, right: 100, bottom: 100, width: 100, height: 100 },
+    { left: 100, top: 0, right: 200, bottom: 100, width: 100, height: 100 },
+    { left: 200, top: 0, right: 300, bottom: 100, width: 100, height: 100 },
+  ];
+  assert.equal(closestChildIndex(rects, { x:  50, y: 50 }), 0);
+  assert.equal(closestChildIndex(rects, { x: 150, y: 50 }), 1);
+  assert.equal(closestChildIndex(rects, { x: 250, y: 50 }), 2);
+  // Cursor exactly between cells 0 and 1 → ties break by document order (lower index wins).
+  assert.equal(closestChildIndex(rects, { x: 100, y: 50 }), 0);
+  // Empty input → -1.
+  assert.equal(closestChildIndex([], { x: 50, y: 50 }), -1);
+  // Out-of-bounds cursor still picks closest child by Euclidean distance.
+  assert.equal(closestChildIndex(rects, { x: 1000, y: -1000 }), 2);
+});
