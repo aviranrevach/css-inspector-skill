@@ -2705,6 +2705,26 @@
     return rows;
   }
 
+  function _boxModelHtml(cs, rect) {
+    const px = (s) => Math.round(_parsePx(s));
+    const mt = px(cs.marginTop),    mr = px(cs.marginRight),  mb = px(cs.marginBottom),  ml = px(cs.marginLeft);
+    const pt = px(cs.paddingTop),   pr = px(cs.paddingRight), pb = px(cs.paddingBottom), pl = px(cs.paddingLeft);
+    const w  = Math.round(rect.width), h = Math.round(rect.height);
+    return `
+      <div class="pp-boxmodel">
+        <span class="lbl-margin">MARGIN</span>
+        <span class="m-t">${mt}</span><span class="m-b">${mb}</span>
+        <span class="m-l">${ml}</span><span class="m-r">${mr}</span>
+        <div class="padding-ring">
+          <span class="lbl-padding">PADDING</span>
+          <span class="p-t">${pt}</span><span class="p-b">${pb}</span>
+          <span class="p-l">${pl}</span><span class="p-r">${pr}</span>
+          <div class="content">${w} × ${h}</div>
+        </div>
+      </div>
+    `;
+  }
+
   function _sectionHtml(name, iconId, rows) {
     if (!rows || rows.length === 0) return '';
     let html = `<div class="pp-section"><svg aria-hidden="true"><use href="#${iconId}"/></svg><span class="label">${name}</span><span class="rule"></span></div>`;
@@ -2721,13 +2741,6 @@
     const size = `${Math.round(r.width)} × ${Math.round(r.height)}`;
 
     const rows = [];
-    const _trim4 = (t, r, b, l) => {
-      // Reduce '14 14 14 14' → '14'; '14 18 14 18' → '14 18'; '14 36 14 20' → '14 36 14 20'.
-      const v = [t, r, b, l].map(_parsePx);
-      if (v[0] === v[1] && v[1] === v[2] && v[2] === v[3]) return `${v[0]}`;
-      if (v[0] === v[2] && v[1] === v[3]) return `${v[0]} ${v[1]}`;
-      return v.join(' ');
-    };
     const isTxt = isTextBearing(target);
     if (isTxt) {
       const fontSize = _parsePx(cs.fontSize);
@@ -2740,10 +2753,6 @@
     if (bg && bg !== 'transparent' && !/rgba\([^)]*,\s*0\s*\)$/.test(bg)) {
       rows.push({ k: 'Background', v: `<span class="pp-swatch" style="background:${bg}"></span>${_rgbToHex(bg)}` });
     }
-    const padding = _trim4(cs.paddingTop, cs.paddingRight, cs.paddingBottom, cs.paddingLeft);
-    if (padding !== '0') rows.push({ k: 'Padding', v: padding });
-    const margin = _trim4(cs.marginTop, cs.marginRight, cs.marginBottom, cs.marginLeft);
-    if (margin !== '0') rows.push({ k: 'Margin', v: margin });
     const radius = _parsePx(cs.borderRadius);
     if (radius > 0) rows.push({ k: 'Radius', v: String(radius) });
 
@@ -2757,12 +2766,33 @@
     for (const row of rows) {
       html += `<div class="pp-kv"><span class="k">${row.k}</span><span class="v">${row.v}</span></div>`;
     }
+
+    // Mini box-model diagram — replaces the previous Padding/Margin text rows.
+    html += _boxModelHtml(cs, r);
+
     const a11yRows = _accessibilityRows(target, cs);
     html += _sectionHtml('ACCESSIBILITY', 's-a11y', a11yRows);
     const layoutRows = _layoutRows(cs);
     html += _sectionHtml('LAYOUT', 's-layout', layoutRows);
     const summary = contentSummary(target);
     html += _sectionHtml('CONTENT', 's-content', [{ k: 'Shape', v: _esc(summary) }]);
+
+    // WALK section header + inline ladder (dwell-revealed via tooltip.dwell .pp-ladder).
+    html += `
+      <div class="pp-section">
+        <svg aria-hidden="true"><use href="#s-walk"/></svg>
+        <span class="label">WALK</span>
+        <span class="rule"></span>
+      </div>
+      <div class="pp-ladder">
+        <span class="grp"><kbd>⌥</kbd> parent</span>
+        <span class="sep">·</span>
+        <span class="grp"><kbd>↑</kbd><kbd>↓</kbd> tree</span>
+        <span class="sep">·</span>
+        <span class="grp"><kbd>Tab</kbd> siblings</span>
+      </div>
+    `;
+
     tooltip.innerHTML = html;
     tooltip.style.display = 'block';
   }
