@@ -2301,12 +2301,27 @@
   tooltip.classList.add('rich');
 
   let _ppCurrentTarget = null;
+  let _dwellTimerId = null;
+  let _dwellMs = 2000; // overwritten after settings are loaded
+
+  function startDwellTimer() {
+    cancelDwell();
+    _dwellTimerId = setTimeout(() => {
+      ppRoot.classList.add('dwell');
+      _dwellTimerId = null;
+    }, _dwellMs);
+  }
+  function cancelDwell() {
+    if (_dwellTimerId != null) { clearTimeout(_dwellTimerId); _dwellTimerId = null; }
+    ppRoot.classList.remove('dwell');
+  }
 
   function clearPrePickLayers() {
     while (ppRoot.firstChild) ppRoot.removeChild(ppRoot.firstChild);
     ppRoot.classList.remove('dwell');
     ppRoot.style.display = 'none';
     _ppCurrentTarget = null;
+    cancelDwell();
   }
 
   function _bandDiv(klass, rect, value) {
@@ -2426,6 +2441,7 @@
 
     // Initial near-cursor highlight based on most recent cursor position.
     _updateNearCursor(target, _lastCursorTargetLocal.x, _lastCursorTargetLocal.y);
+    startDwellTimer();
   }
 
   function _esc(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -2672,6 +2688,7 @@
     settings = { ...settings, ...partial };
   }
   let settings = loadSettings();
+  _dwellMs = (typeof settings.dwellMs === 'number') ? settings.dwellMs : 2000;
 
   // ── Design-system component matching ──────────────────────────────────────
   // Tracks user-issued component intents (variant swaps, conversions) so the
@@ -3543,11 +3560,16 @@
       cx -= dx; cy -= dy;
     }
     // From iframe events: already iframe-local.
-    _lastCursorTargetLocal = { x: cx, y: cy };
     if (pickMode) {
-      // Re-paint near-cursor highlight on cursor movement during pick mode.
       const cur = _ppCurrentTarget;
+      const ddx = (cx - _lastCursorTargetLocal.x);
+      const ddy = (cy - _lastCursorTargetLocal.y);
+      const moved = Math.hypot(ddx, ddy) > 2;
+      _lastCursorTargetLocal = { x: cx, y: cy };
       if (cur) _updateNearCursor(cur, cx, cy);
+      if (moved) startDwellTimer();
+    } else {
+      _lastCursorTargetLocal = { x: cx, y: cy };
     }
     updateArmedLevel(cx, cy);
     updateSelectionHover(cx, cy);

@@ -160,3 +160,14 @@ test('CONTENT section shows child count for a row', async ({ page }) => {
   await expect(tip).toContainText('CONTENT');
   await expect(tip).toContainText('3 children');
 });
+
+test('after 2.2s of stillness the .__inspector-pp-root gains the .dwell class', async ({ page }) => {
+  await enterPickMode(page);
+  const target = await page.frameLocator('iframe').locator('[data-pp-test="row"]').boundingBox();
+  await page.mouse.move(target.x + 10, target.y + 7);
+  await page.waitForTimeout(2200);
+  await expect(page.locator('.__inspector-pp-root')).toHaveClass(/\bdwell\b/);
+  // A small cursor twitch (>2px) should remove the class.
+  await page.mouse.move(target.x + 15, target.y + 12);
+  await expect(page.locator('.__inspector-pp-root')).not.toHaveClass(/\bdwell\b/);
+});
