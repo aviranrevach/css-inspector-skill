@@ -3653,8 +3653,19 @@
   }
   // Reposition armed indicator + FABs + selection overlays on scroll /
   // resize so they track the live element bounds.
-  document.addEventListener('scroll', () => { renderArmedIndicator(); positionFabs(); repositionSelectionOverlays(); }, true);
-  window.addEventListener('resize', () => { renderArmedIndicator(); positionFabs(); repositionSelectionOverlays(); });
+  document.addEventListener('scroll', () => {
+    renderArmedIndicator(); positionFabs(); repositionSelectionOverlays();
+    if (pickMode && _ppCurrentTarget) renderPrePickLayers(_ppCurrentTarget);
+  }, true);
+  window.addEventListener('resize', () => {
+    renderArmedIndicator(); positionFabs(); repositionSelectionOverlays();
+    if (pickMode && _ppCurrentTarget) renderPrePickLayers(_ppCurrentTarget);
+  });
+  if (targetDoc !== document) {
+    targetDoc.addEventListener('scroll', () => {
+      if (pickMode && _ppCurrentTarget) renderPrePickLayers(_ppCurrentTarget);
+    }, true);
+  }
   root.querySelector('#__inspector-deselect').addEventListener('click', (e) => {
     e.stopPropagation();
     clearSelection();
