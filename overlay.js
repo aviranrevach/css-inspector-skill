@@ -1749,11 +1749,7 @@
   opacity: 0; transition: opacity 0.4s ease-out;
 }
 .__inspector-pp-root.dwell .__inspector-pp-child .size { opacity: 1; }
-.__inspector-pp-child.near {
-  border-style: solid;
-  border-color: #2563eb;
-  box-shadow: 0 0 0 1px #2563eb;
-}
+
 .__inspector-pp-chevron {
   position: fixed; pointer-events: none;
   color: #3b82f6;
@@ -1769,30 +1765,7 @@
 }
 .__inspector-pp-breadcrumb b { color: #64748b; }
 .__inspector-pp-root.dwell .__inspector-pp-breadcrumb { opacity: 1; }
-.__inspector-pp-ladder {
-  position: fixed; bottom: 14px; right: 14px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  box-shadow: 0 6px 18px rgba(15,23,42,0.08);
-  padding: 6px 8px;
-  font: 400 10px Inter, system-ui, sans-serif;
-  color: #475569;
-  display: flex; align-items: center; gap: 6px;
-  z-index: 2147483644;
-  opacity: 0; transition: opacity 0.4s ease-out;
-  pointer-events: none;
-}
-.__inspector-pp-root.dwell .__inspector-pp-ladder { opacity: 1; }
-.__inspector-pp-ladder kbd {
-  background: #f8fafc;
-  border: 1px solid #cbd5e1;
-  border-bottom-width: 2px;
-  border-radius: 4px;
-  padding: 1px 4px;
-  font: 600 9px ui-monospace, Menlo, monospace;
-  color: #0f172a;
-}
+
 .__inspector-pp-dwell-ring {
   position: fixed;
   width: 12px; height: 12px;
@@ -1875,6 +1848,96 @@
 #__inspector-tooltip.rich .pp-ok   { color: #16a34a; font-weight: 700; }
 #__inspector-tooltip.rich .pp-warn { color: #f97316; font-weight: 700; margin-left: 4px; }
 #__inspector-tooltip.rich .pp-no   { color: #94a3b8; font-size: 13px; vertical-align: -1px; }
+
+/* ────── Tooltip mini box-model diagram ────── */
+#__inspector-tooltip.rich .pp-boxmodel {
+  margin: 8px 0;
+  border-radius: 4px;
+  padding: 16px 22px;
+  position: relative;
+  font: 600 10px Inter, system-ui, sans-serif;
+  background:
+    repeating-linear-gradient(135deg,
+      rgba(14, 195, 255, 0.45) 0 1px,
+      transparent 1px 4px),
+    rgba(14, 195, 255, 0.10);
+  border: 1px dashed #0ec3ff;
+  color: #075985;
+}
+#__inspector-tooltip.rich .pp-boxmodel .lbl-margin {
+  position: absolute; top: 2px; left: 6px;
+  font: 700 8px Inter, system-ui, sans-serif;
+  letter-spacing: 0.12em;
+  color: #075985;
+}
+#__inspector-tooltip.rich .pp-boxmodel .m-t { position: absolute; top:    8px;  left: 50%;  transform: translate(-50%, -50%); }
+#__inspector-tooltip.rich .pp-boxmodel .m-b { position: absolute; bottom: 8px;  left: 50%;  transform: translate(-50%,  50%); }
+#__inspector-tooltip.rich .pp-boxmodel .m-l { position: absolute; left:   11px; top:  50%;  transform: translate(-50%, -50%); }
+#__inspector-tooltip.rich .pp-boxmodel .m-r { position: absolute; right:  11px; top:  50%;  transform: translate( 50%, -50%); }
+
+#__inspector-tooltip.rich .pp-boxmodel .padding-ring {
+  background: #bae6fd;
+  border: 2px solid #3B82F6;
+  border-radius: 3px;
+  padding: 16px 18px;
+  position: relative;
+  color: #0369a1;
+  font-weight: 600;
+}
+#__inspector-tooltip.rich .pp-boxmodel .padding-ring .lbl-padding {
+  position: absolute; top: 2px; left: 6px;
+  font: 700 8px Inter, system-ui, sans-serif;
+  letter-spacing: 0.12em;
+  color: #0369a1;
+}
+#__inspector-tooltip.rich .pp-boxmodel .padding-ring .p-t { position: absolute; top:    8px; left: 50%; transform: translate(-50%, -50%); color: #0369a1; }
+#__inspector-tooltip.rich .pp-boxmodel .padding-ring .p-b { position: absolute; bottom: 8px; left: 50%; transform: translate(-50%,  50%); color: #0369a1; }
+#__inspector-tooltip.rich .pp-boxmodel .padding-ring .p-l { position: absolute; left:   9px; top:  50%; transform: translate(-50%, -50%); color: #0369a1; }
+#__inspector-tooltip.rich .pp-boxmodel .padding-ring .p-r { position: absolute; right:  9px; top:  50%; transform: translate( 50%, -50%); color: #0369a1; }
+#__inspector-tooltip.rich .pp-boxmodel .padding-ring .content {
+  background: #ffffff;
+  border: 0;
+  border-radius: 2px;
+  padding: 10px 0;
+  text-align: center;
+  color: #0f172a;
+  font: 600 12px Inter, system-ui, sans-serif;
+}
+
+/* ────── Inline ladder section (replaces floating banner) ────── */
+#__inspector-tooltip.rich .pp-ladder {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 4px 0 2px;
+  font: 400 10px Inter, system-ui, sans-serif;
+  color: #64748b;
+  opacity: 0;
+  transition: opacity 0.4s ease-out;
+}
+#__inspector-tooltip.rich.dwell .pp-ladder { opacity: 1; }
+#__inspector-tooltip.rich .pp-ladder .grp { display: inline-flex; align-items: center; gap: 4px; }
+#__inspector-tooltip.rich .pp-ladder .sep { color: #cbd5e1; margin: 0 -2px; }
+#__inspector-tooltip.rich .pp-ladder kbd {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 14px; height: 14px;
+  padding: 0 4px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 3px;
+  font: 600 9px ui-monospace, "SF Mono", Menlo, monospace;
+  color: #0f172a;
+  line-height: 1;
+}
+
+/* ────── Near-cursor child dot (replaces .near outline) ────── */
+.__inspector-pp-child .dot {
+  position: absolute;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #3b82f6;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
   `;
 
   // ── Inject styles ──────────────────────────────────────────────────────────
@@ -2293,6 +2356,14 @@
         </symbol>
         <symbol id="s-content" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="15" y2="12"/><line x1="4" y1="18" x2="18" y2="18"/>
+        </symbol>
+        <symbol id="s-walk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="6" width="20" height="12" rx="2"/>
+          <line x1="6"  y1="10" x2="6"  y2="10"/>
+          <line x1="10" y1="10" x2="10" y2="10"/>
+          <line x1="14" y1="10" x2="14" y2="10"/>
+          <line x1="18" y1="10" x2="18" y2="10"/>
+          <line x1="7"  y1="14" x2="17" y2="14"/>
         </symbol>
       </defs>
     </svg>
