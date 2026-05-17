@@ -60,7 +60,7 @@ async function enterPickMode(page) {
 test('hovering a row paints 4 margin bands and 4 padding bands', async ({ page }) => {
   await enterPickMode(page);
   const target = await page.frameLocator('iframe').locator('[data-pp-test="row"]').boundingBox();
-  await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2);
+  await page.mouse.move(target.x + 10, target.y + 7);
   await expect(page.locator('.__inspector-pp-band.margin')).toHaveCount(4);
   await expect(page.locator('.__inspector-pp-band.padding')).toHaveCount(4);
 });

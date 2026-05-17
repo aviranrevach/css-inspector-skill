@@ -7005,23 +7005,6 @@
     targetDoc.removeEventListener('contextmenu', onPickRightClick, true);
   }
 
-  // Walk up from el to find the nearest ancestor (including el itself) that has
-  // non-zero margins. Falls back to el when no margined ancestor is found.
-  // This lets renderPrePickLayers show the layout-owner's bands when the cursor
-  // lands on a margin-less flex/grid child whose container carries the margin.
-  function _prePickTarget(el) {
-    let cur = el;
-    while (cur && cur !== targetDoc.body && cur !== targetDoc.documentElement) {
-      const cs = targetWin.getComputedStyle(cur);
-      if (_parsePx(cs.marginTop) > 0 || _parsePx(cs.marginRight) > 0 ||
-          _parsePx(cs.marginBottom) > 0 || _parsePx(cs.marginLeft) > 0) {
-        return cur;
-      }
-      cur = cur.parentElement;
-    }
-    return el;
-  }
-
   function onPickHover(e) {
     // Guard against non-Element targets (text nodes, document, etc.)
     // — closest/classList only exist on Elements.
@@ -7032,7 +7015,7 @@
     );
     e.target.classList.add('__inspector-highlight');
     showPickHoverOverlay(e.target);
-    renderPrePickLayers(_prePickTarget(e.target));
+    renderPrePickLayers(e.target);
     const rect = getFrameRect();
     tooltip.style.display = 'block';
     tooltip.style.left = (rect.left + e.clientX + 12) + 'px';
