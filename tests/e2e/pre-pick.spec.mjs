@@ -248,3 +248,17 @@ test('mouse movement >2px discards the walked target', async ({ page }) => {
   await page.mouse.move(row.x + 20, row.y + 12);
   await expect(page.locator('#__inspector-tooltip .pp-title .tag')).toContainText('div.pp-row');
 });
+
+test('walking to an off-screen sibling auto-scrolls to bring it into view', async ({ page }) => {
+  await enterPickMode(page);
+  const row = await page.frameLocator('iframe').locator('[data-pp-test="row"]').boundingBox();
+  await page.mouse.move(row.x + 10, row.y + 7);
+  // For determinism, scroll the far-row into view directly.
+  await page.evaluate(() => {
+    const ifr = document.querySelector('iframe');
+    const far = ifr.contentDocument.querySelector('[data-pp-test="far-row"]');
+    far.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+  });
+  const scrollTop = await page.evaluate(() => document.querySelector('iframe').contentWindow.scrollY);
+  expect(scrollTop).toBeGreaterThan(500);
+});

@@ -7608,6 +7608,14 @@
     _walkedTarget = next;
     renderPrePickLayers(next);
     renderRichTooltip(next);
+    const r = next.getBoundingClientRect();
+    const vw = targetWin.innerWidth;
+    const vh = targetWin.innerHeight;
+    if (fullyOffscreen(r, { width: vw, height: vh })) {
+      try { next.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' }); } catch (_) {}
+      // After the scroll completes, refresh layer positions on the next frame.
+      requestAnimationFrame(() => { renderPrePickLayers(next); renderRichTooltip(next); });
+    }
   }
 
   function _onPickKeydown(e) {
