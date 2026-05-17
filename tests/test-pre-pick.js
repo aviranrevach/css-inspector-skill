@@ -283,3 +283,44 @@ test('chevronEdgesForViewport flags edges that are cut by viewport', () => {
     { top: false, right: false, bottom: true, left: false }
   );
 });
+
+test('nextWalkTarget walks parent / child / siblings', () => {
+  const { nextWalkTarget } = load();
+
+  // Build a small DOM:    body
+  //                        └─ section
+  //                            ├─ rowA
+  //                            ├─ rowB  ← start here
+  //                            └─ rowC
+  // rowB has 3 children: cell0, cell1, cell2
+  const body = { tagName: 'BODY', children: [], parentElement: null };
+  const section = { tagName: 'SECTION', children: [], parentElement: body };
+  body.children.push(section);
+  const rowA = { tagName: 'DIV', children: [], parentElement: section, getBoundingClientRect: () => ({ left: 0, top:   0, right: 300, bottom:  50, width: 300, height: 50 }) };
+  const rowB = { tagName: 'DIV', children: [], parentElement: section, getBoundingClientRect: () => ({ left: 0, top:  60, right: 300, bottom: 160, width: 300, height: 100 }) };
+  const rowC = { tagName: 'DIV', children: [], parentElement: section, getBoundingClientRect: () => ({ left: 0, top: 170, right: 300, bottom: 220, width: 300, height: 50 }) };
+  section.children.push(rowA, rowB, rowC);
+  const cell0 = { tagName: 'DIV', children: [], parentElement: rowB, getBoundingClientRect: () => ({ left:   0, top: 60, right: 100, bottom: 160, width: 100, height: 100 }) };
+  const cell1 = { tagName: 'DIV', children: [], parentElement: rowB, getBoundingClientRect: () => ({ left: 100, top: 60, right: 200, bottom: 160, width: 100, height: 100 }) };
+  const cell2 = { tagName: 'DIV', children: [], parentElement: rowB, getBoundingClientRect: () => ({ left: 200, top: 60, right: 300, bottom: 160, width: 100, height: 100 }) };
+  rowB.children.push(cell0, cell1, cell2);
+
+  // parent
+  assert.equal(nextWalkTarget(rowB, 'parent'), section);
+  // child — picks nearest to cursor at (150, 110) → cell1
+  assert.equal(nextWalkTarget(rowB, 'child', { x: 150, y: 110 }), cell1);
+  // child — picks nearest to cursor at (50, 110) → cell0
+  assert.equal(nextWalkTarget(rowB, 'child', { x: 50, y: 110 }), cell0);
+  // next sibling
+  assert.equal(nextWalkTarget(rowB, 'next'), rowC);
+  // prev sibling
+  assert.equal(nextWalkTarget(rowB, 'prev'), rowA);
+  // parent at the top of the chain → null when at <body>
+  assert.equal(nextWalkTarget(body, 'parent'), null);
+  // child when no children → null
+  assert.equal(nextWalkTarget(cell0, 'child', { x: 0, y: 0 }), null);
+  // prev when first child → null
+  assert.equal(nextWalkTarget(rowA, 'prev'), null);
+  // next when last child → null
+  assert.equal(nextWalkTarget(rowC, 'next'), null);
+});

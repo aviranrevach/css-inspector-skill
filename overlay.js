@@ -218,8 +218,34 @@
     };
   }
 
+  function nextWalkTarget(el, direction, cursor) {
+    if (!el) return null;
+    if (direction === 'parent') {
+      const p = el.parentElement;
+      if (!p || !p.tagName) return null;
+      const t = p.tagName.toUpperCase();
+      if (t === 'BODY' || t === 'HTML') return null; // don't climb past body
+      return p;
+    }
+    if (direction === 'child') {
+      const kids = el.children ? Array.from(el.children) : [];
+      if (kids.length === 0) return null;
+      const rects = kids.map(k => k.getBoundingClientRect());
+      const idx = closestChildIndex(rects, cursor || { x: 0, y: 0 });
+      return idx >= 0 ? kids[idx] : null;
+    }
+    const parent = el.parentElement;
+    if (!parent || !parent.children) return null;
+    const siblings = Array.from(parent.children);
+    const i = siblings.indexOf(el);
+    if (i < 0) return null;
+    if (direction === 'next') return siblings[i + 1] || null;
+    if (direction === 'prev') return siblings[i - 1] || null;
+    return null;
+  }
+
   if (typeof module !== 'undefined') {
-    module.exports = { computeSelector, typeIconKey, headingLevel, isTextBearing, closestChildIndex, contrastRatio, wcagBadge, effectiveBackground, layoutNonDefaults, contentSummary, buildBreadcrumb, bandRectsForBox, gapStripsForFlexRow, fullyOffscreen, chevronEdgesForViewport };
+    module.exports = { computeSelector, typeIconKey, headingLevel, isTextBearing, closestChildIndex, contrastRatio, wcagBadge, effectiveBackground, layoutNonDefaults, contentSummary, buildBreadcrumb, bandRectsForBox, gapStripsForFlexRow, fullyOffscreen, chevronEdgesForViewport, nextWalkTarget };
   }
 
   // ── Browser-only from here ────────────────────────────────────────────────
