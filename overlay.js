@@ -224,7 +224,7 @@
       const p = el.parentElement;
       if (!p || !p.tagName) return null;
       const t = p.tagName.toUpperCase();
-      if (t === 'BODY' || t === 'HTML') return null; // don't climb past body
+      if (t === 'HTML') return null; // don't climb past body
       return p;
     }
     if (direction === 'child') {
@@ -2469,6 +2469,41 @@
     ring.className = '__inspector-pp-dwell-ring';
     ring.style.cssText += `left:${box.left + box.width - 16}px;top:${box.top - 20}px;`;
     ppRoot.appendChild(ring);
+
+    const viewport = { width: targetWin.innerWidth, height: targetWin.innerHeight };
+    const chevrons = chevronEdgesForViewport({ top: r.top, bottom: r.bottom, left: r.left, right: r.right }, viewport);
+    if (chevrons.top || chevrons.bottom || chevrons.left || chevrons.right) {
+      const midX = Math.max(8, Math.min(viewport.width  - 8, box.left + box.width / 2));
+      const midY = Math.max(8, Math.min(viewport.height - 8, box.top  + box.height / 2));
+      if (chevrons.top) {
+        const c = document.createElement('div');
+        c.className = '__inspector-pp-chevron';
+        c.textContent = '↑';
+        c.style.cssText += `left:${midX - 7}px;top:4px;`;
+        ppRoot.appendChild(c);
+      }
+      if (chevrons.bottom) {
+        const c = document.createElement('div');
+        c.className = '__inspector-pp-chevron';
+        c.textContent = '↓';
+        c.style.cssText += `left:${midX - 7}px;top:${viewport.height - 22}px;`;
+        ppRoot.appendChild(c);
+      }
+      if (chevrons.left) {
+        const c = document.createElement('div');
+        c.className = '__inspector-pp-chevron';
+        c.textContent = '←';
+        c.style.cssText += `left:4px;top:${midY - 9}px;`;
+        ppRoot.appendChild(c);
+      }
+      if (chevrons.right) {
+        const c = document.createElement('div');
+        c.className = '__inspector-pp-chevron';
+        c.textContent = '→';
+        c.style.cssText += `left:${viewport.width - 22}px;top:${midY - 9}px;`;
+        ppRoot.appendChild(c);
+      }
+    }
 
     startDwellTimer();
   }

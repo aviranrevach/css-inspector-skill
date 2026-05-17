@@ -262,3 +262,17 @@ test('walking to an off-screen sibling auto-scrolls to bring it into view', asyn
   const scrollTop = await page.evaluate(() => document.querySelector('iframe').contentWindow.scrollY);
   expect(scrollTop).toBeGreaterThan(500);
 });
+
+test('walking to body shows chevrons because it overflows the viewport', async ({ page }) => {
+  await enterPickMode(page);
+  const row = await page.frameLocator('iframe').locator('[data-pp-test="row"]').boundingBox();
+  await page.mouse.move(row.x + 10, row.y + 7);
+  // Walk up multiple times to reach body (or a tall section).
+  await page.keyboard.down('Alt');
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.up('Alt');
+  // The fixture has a 2000px filler block so the body/section overflow the viewport. Some chevrons appear.
+  await expect(page.locator('.__inspector-pp-chevron')).not.toHaveCount(0);
+});
