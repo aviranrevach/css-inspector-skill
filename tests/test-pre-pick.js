@@ -222,3 +222,33 @@ test('bandRectsForBox returns 8 rects for margin and padding sides', () => {
   // Padding left: sits inside left edge of box, between top and bottom paddings
   assert.deepEqual(r.paddingLeft, { left: 100, top: 55, width: 8, height: 90 });
 });
+
+test('gapStripsForFlexRow returns strips between siblings along the main axis', () => {
+  const { gapStripsForFlexRow } = load();
+  // 3 cells, gap 10, row direction
+  const parentRect = { left: 0, top: 0, right: 320, bottom: 100, width: 320, height: 100 };
+  const childRects = [
+    { left:   0, top: 0, right: 100, bottom: 100, width: 100, height: 100 },
+    { left: 110, top: 0, right: 210, bottom: 100, width: 100, height: 100 },
+    { left: 220, top: 0, right: 320, bottom: 100, width: 100, height: 100 },
+  ];
+  const strips = gapStripsForFlexRow(parentRect, childRects, 10, 'row');
+  assert.equal(strips.length, 2);
+  assert.deepEqual(strips[0], { left: 100, top: 0, width: 10, height: 100, value: 10 });
+  assert.deepEqual(strips[1], { left: 210, top: 0, width: 10, height: 100, value: 10 });
+
+  // Column direction, gap 8
+  const colChildren = [
+    { left: 0, top:  0, right: 100, bottom:  50, width: 100, height: 50 },
+    { left: 0, top: 58, right: 100, bottom: 108, width: 100, height: 50 },
+  ];
+  const colParent = { left: 0, top: 0, right: 100, bottom: 108, width: 100, height: 108 };
+  const colStrips = gapStripsForFlexRow(colParent, colChildren, 8, 'column');
+  assert.equal(colStrips.length, 1);
+  assert.deepEqual(colStrips[0], { left: 0, top: 50, width: 100, height: 8, value: 8 });
+
+  // Zero gap → no strips
+  assert.deepEqual(gapStripsForFlexRow(parentRect, childRects, 0, 'row'), []);
+  // Single child → no strips
+  assert.deepEqual(gapStripsForFlexRow(parentRect, [childRects[0]], 10, 'row'), []);
+});

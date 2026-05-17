@@ -175,8 +175,38 @@
     };
   }
 
+  function gapStripsForFlexRow(parentRect, childRects, gap, direction) {
+    if (!gap || gap <= 0) return [];
+    if (!childRects || childRects.length < 2) return [];
+    const strips = [];
+    if (direction === 'column') {
+      for (let i = 0; i < childRects.length - 1; i++) {
+        const a = childRects[i], b = childRects[i + 1];
+        strips.push({
+          left: parentRect.left,
+          top:  a.bottom,
+          width: parentRect.width,
+          height: b.top - a.bottom,
+          value: gap,
+        });
+      }
+    } else {
+      for (let i = 0; i < childRects.length - 1; i++) {
+        const a = childRects[i], b = childRects[i + 1];
+        strips.push({
+          left:  a.right,
+          top:   parentRect.top,
+          width: b.left - a.right,
+          height: parentRect.height,
+          value: gap,
+        });
+      }
+    }
+    return strips;
+  }
+
   if (typeof module !== 'undefined') {
-    module.exports = { computeSelector, typeIconKey, headingLevel, isTextBearing, closestChildIndex, contrastRatio, wcagBadge, effectiveBackground, layoutNonDefaults, contentSummary, buildBreadcrumb, bandRectsForBox };
+    module.exports = { computeSelector, typeIconKey, headingLevel, isTextBearing, closestChildIndex, contrastRatio, wcagBadge, effectiveBackground, layoutNonDefaults, contentSummary, buildBreadcrumb, bandRectsForBox, gapStripsForFlexRow };
   }
 
   // ── Browser-only from here ────────────────────────────────────────────────
