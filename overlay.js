@@ -2305,14 +2305,14 @@
 
   let _ppCurrentTarget = null;
   let _dwellTimerId = null;
-  let _dwellMs = 2000; // overwritten after settings are loaded
 
   function startDwellTimer() {
     cancelDwell();
+    const ms = (settings && typeof settings.dwellMs === 'number') ? settings.dwellMs : 2000;
     _dwellTimerId = setTimeout(() => {
       ppRoot.classList.add('dwell');
       _dwellTimerId = null;
-    }, _dwellMs);
+    }, ms);
   }
   function cancelDwell() {
     if (_dwellTimerId != null) { clearTimeout(_dwellTimerId); _dwellTimerId = null; }
@@ -2743,6 +2743,9 @@
     // When on (default), the picked element shows a persistent 2px blue
     // outline so users can see what's selected. Off = no outline.
     showSelectedOutline: true,
+    // Dwell duration in ms — how long the cursor must hold still before
+    // the breadcrumb / size badges / ladder hint fade in during pick mode.
+    dwellMs: 2000,
   };
   function loadSettings() {
     const fromHost = (typeof window !== 'undefined' && window.__inspectorSettings) || null;
@@ -2752,7 +2755,6 @@
     settings = { ...settings, ...partial };
   }
   let settings = loadSettings();
-  _dwellMs = (typeof settings.dwellMs === 'number') ? settings.dwellMs : 2000;
 
   // ── Design-system component matching ──────────────────────────────────────
   // Tracks user-issued component intents (variant swaps, conversions) so the
