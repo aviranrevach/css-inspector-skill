@@ -120,3 +120,15 @@ test('tooltip shows Padding and Background rows for the row', async ({ page }) =
   await expect(tip).toContainText('14 36 14 20');
   await expect(tip).toContainText('Background');
 });
+
+test('hovering a button shows the ACCESSIBILITY section with Contrast, Role, Focusable, Name', async ({ page }) => {
+  await enterPickMode(page);
+  const target = await page.frameLocator('iframe').locator('[data-pp-test="btn"]').boundingBox();
+  await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2);
+  const tip = page.locator('#__inspector-tooltip');
+  await expect(tip).toContainText('ACCESSIBILITY');
+  await expect(tip).toContainText('Contrast');
+  await expect(tip).toContainText('button'); // Role
+  await expect(tip).toContainText('Save changes'); // Name
+  await expect(tip).toContainText('AA'); // Contrast badge
+});

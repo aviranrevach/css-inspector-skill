@@ -2446,6 +2446,96 @@
     return cls ? `${t}.${cls}` : t;
   }
 
+  function _detectHandlers(target, cs) {
+    const out = [];
+    const inline = ['onclick','onmousedown','onmouseup','onkeydown','onkeyup','onmouseenter','onmouseleave'];
+    inline.forEach(k => { if (target[k]) out.push(k.replace(/^on/, '')); });
+    if (cs.cursor === 'pointer') out.push('cursor: pointer');
+    // Heuristic CSS rule scan — wrapped in try/catch for cross-origin sheets.
+    try {
+      const sheets = targetDoc.styleSheets;
+      for (let i = 0; i < sheets.length; i++) {
+        let rules;
+        try { rules = sheets[i].cssRules; } catch (_) { continue; }
+        if (!rules) continue;
+        for (let j = 0; j < rules.length; j++) {
+          const sel = rules[j].selectorText;
+          if (!sel) continue;
+          if (/:(hover|focus|active)\b/.test(sel)) {
+            const base = sel.replace(/:(hover|focus|active)\b/g, '');
+            try {
+              if (target.matches(base)) { out.push(':hover/:focus style'); j = rules.length; i = sheets.length; break; }
+            } catch (_) {}
+          }
+        }
+      }
+    } catch (_) {}
+    return Array.from(new Set(out));
+  }
+
+  function _ariaAttrs(target) {
+    const out = {};
+    const a = target.attributes || [];
+    for (let i = 0; i < a.length; i++) {
+      if (a[i].name === 'aria-label' || a[i].name === 'aria-labelledby' || a[i].name === 'aria-describedby') {
+        out[a[i].name] = a[i].value;
+      }
+    }
+    return out;
+  }
+
+  function _accessibilityRows(target, cs) {
+    const role = target.getAttribute('role') || (function inferred() {
+      const tag = target.tagName.toLowerCase();
+      if (tag === 'button') return 'button';
+      if (tag === 'a' && target.hasAttribute('href')) return 'link';
+      if (/^h[1-6]$/.test(tag)) return 'heading';
+      if (tag === 'img') return 'img';
+      if (tag === 'nav') return 'navigation';
+      return 'generic';
+    })();
+    const name = target.getAttribute('aria-label') || (isTextBearing(target) ? (target.textContent || '').trim() : '');
+    const focusable = target.tabIndex >= 0;
+    const handlers = _detectHandlers(target, cs);
+    const aria = _ariaAttrs(target);
+
+    const interesting = role !== 'generic' || isTextBearing(target) || handlers.length > 0;
+    if (!interesting) return null;
+
+    const rows = [];
+    if (isTextBearing(target)) {
+      const bg = effectiveBackground(t => targetWin.getComputedStyle(t), target);
+      const fgRgb = _rgbTriple(cs.color);
+      const bgRgb = _rgbTriple(bg);
+      const fontPx = _parsePx(cs.fontSize);
+      const fontWeight = parseInt(cs.fontWeight, 10) || 400;
+      if (fgRgb && bgRgb) {
+        const ratio = contrastRatio(fgRgb, bgRgb);
+        const badge = wcagBadge(ratio, fontPx, fontWeight);
+        const cls = badge === 'FAIL' ? 'pp-warn' : 'pp-ok';
+        rows.push({ k: 'Contrast', v: `<span class="pp-aa">Aa</span>${ratio.toFixed(1)} <span class="${cls}">${badge}</span>` });
+      }
+    }
+    if (name)            rows.push({ k: 'Name', v: `"${_esc(name.length > 28 ? name.slice(0, 27) + '…' : name)}"` });
+    rows.push({ k: 'Role', v: role });
+    rows.push({ k: 'Focusable', v: focusable ? '<span class="pp-ok">✓</span>' : '<span class="pp-no">⊘</span>' });
+    if (handlers.length) rows.push({ k: 'Handlers', v: _esc(handlers.join(' · ')) });
+    for (const key in aria) rows.push({ k: key, v: `"${_esc(aria[key])}"` });
+    return rows;
+  }
+
+  function _rgbTriple(rgb) {
+    const m = /rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/.exec(rgb || '');
+    return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : null;
+  }
+
+  function _sectionHtml(name, iconId, rows) {
+    if (!rows || rows.length === 0) return '';
+    let html = `<div class="pp-section"><svg aria-hidden="true"><use href="#${iconId}"/></svg><span class="label">${name}</span><span class="rule"></span></div>`;
+    for (const row of rows) html += `<div class="pp-kv"><span class="k">${row.k}</span><span class="v">${row.v}</span></div>`;
+    return html;
+  }
+
   function renderRichTooltip(target) {
     if (!target) { tooltip.style.display = 'none'; return; }
     const r  = target.getBoundingClientRect();
@@ -2491,6 +2581,8 @@
     for (const row of rows) {
       html += `<div class="pp-kv"><span class="k">${row.k}</span><span class="v">${row.v}</span></div>`;
     }
+    const a11yRows = _accessibilityRows(target, cs);
+    html += _sectionHtml('ACCESSIBILITY', 's-a11y', a11yRows);
     tooltip.innerHTML = html;
     tooltip.style.display = 'block';
   }
