@@ -159,3 +159,27 @@ test('layoutNonDefaults returns only non-default layout props, or null', () => {
     transform: 'none', maxWidth: '600px',
   }), { maxWidth: '600px' });
 });
+
+test('contentSummary describes children + text shape', () => {
+  const { contentSummary } = load();
+  const elt = (children, textLen = 0, isImg = false) => ({
+    tagName: isImg ? 'IMG' : 'DIV',
+    children,
+    childNodes: textLen > 0 ? [{ nodeType: 3, textContent: 'x'.repeat(textLen) }, ...children] : [...children],
+    textContent: 'x'.repeat(textLen),
+  });
+  const child = (tag = 'SPAN') => ({ tagName: tag, children: [], childNodes: [] });
+
+  // Empty wrapper
+  assert.equal(contentSummary(elt([])), 'empty wrapper');
+  // Image element
+  assert.equal(contentSummary(elt([], 0, true)), 'image · raster');
+  // Icon only (one SVG child, no text)
+  assert.equal(contentSummary(elt([child('SVG')])), 'icon only');
+  // Text only
+  assert.equal(contentSummary(elt([], 12)), 'text only · 12 chars');
+  // Children + text
+  assert.equal(contentSummary(elt([child(), child()], 8)), '2 children · 8 chars');
+  // Children only
+  assert.equal(contentSummary(elt([child(), child(), child()])), '3 children');
+});

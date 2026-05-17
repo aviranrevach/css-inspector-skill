@@ -121,8 +121,24 @@
     return Object.keys(out).length === 0 ? null : out;
   }
 
+  function contentSummary(el) {
+    if (!el) return '';
+    const tag = (el.tagName || '').toUpperCase();
+    if (tag === 'IMG' || tag === 'SVG' || tag === 'PICTURE') return 'image · raster';
+    const kids = el.children ? Array.from(el.children) : [];
+    const ownText = isTextBearing(el) ? (el.textContent || '').trim().length : 0;
+    if (kids.length === 0 && ownText === 0) return 'empty wrapper';
+    if (kids.length === 1 && ownText === 0) {
+      const childTag = (kids[0].tagName || '').toUpperCase();
+      if (childTag === 'SVG' || childTag === 'IMG') return 'icon only';
+    }
+    if (kids.length === 0 && ownText > 0) return `text only · ${ownText} chars`;
+    if (kids.length >= 1 && ownText > 0) return `${kids.length} ${kids.length === 1 ? 'child' : 'children'} · ${ownText} chars`;
+    return `${kids.length} ${kids.length === 1 ? 'child' : 'children'}`;
+  }
+
   if (typeof module !== 'undefined') {
-    module.exports = { computeSelector, typeIconKey, headingLevel, isTextBearing, closestChildIndex, contrastRatio, wcagBadge, effectiveBackground, layoutNonDefaults };
+    module.exports = { computeSelector, typeIconKey, headingLevel, isTextBearing, closestChildIndex, contrastRatio, wcagBadge, effectiveBackground, layoutNonDefaults, contentSummary };
   }
 
   // ── Browser-only from here ────────────────────────────────────────────────
