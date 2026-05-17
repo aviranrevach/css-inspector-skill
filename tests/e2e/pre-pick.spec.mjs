@@ -221,3 +221,17 @@ test('⌥↓ dives into the child nearest the cursor', async ({ page }) => {
   await page.keyboard.up('Alt');
   await expect(page.locator('#__inspector-tooltip .pp-title .tag')).toContainText('div.pp-cell');
 });
+
+test('Tab hops to the next sibling cell', async ({ page }) => {
+  await enterPickMode(page);
+  const cell0 = await page.frameLocator('iframe').locator('[data-pp-test="cell0"]').boundingBox();
+  await page.mouse.move(cell0.x + cell0.width / 2, cell0.y + cell0.height / 2);
+  // Cursor lands on cell0 directly — tooltip tag should be div.pp-cell.
+  await expect(page.locator('#__inspector-tooltip .pp-title .tag')).toContainText('div.pp-cell');
+  // Tab to next sibling cell — still div.pp-cell, but a different element.
+  await page.keyboard.press('Tab');
+  await expect(page.locator('#__inspector-tooltip .pp-title .tag')).toContainText('div.pp-cell');
+  // Shift+Tab walks back.
+  await page.keyboard.press('Shift+Tab');
+  await expect(page.locator('#__inspector-tooltip .pp-title .tag')).toContainText('div.pp-cell');
+});

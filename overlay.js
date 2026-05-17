@@ -7605,6 +7605,10 @@
 
   function _onPickKeydown(e) {
     if (!pickMode) return;
+    if (e.key === 'Tab') {
+      e.preventDefault(); e.stopPropagation();
+      return commitWalk(e.shiftKey ? 'prev' : 'next');
+    }
     if (!e.altKey) return;
     let dir = null;
     if (e.key === 'ArrowUp')    dir = 'parent';
@@ -7612,12 +7616,20 @@
     if (e.key === 'ArrowLeft')  dir = 'prev';
     if (e.key === 'ArrowRight') dir = 'next';
     if (!dir) return;
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault(); e.stopPropagation();
     commitWalk(dir);
   }
   document.addEventListener('keydown', _onPickKeydown, true);
   if (targetDoc !== document) targetDoc.addEventListener('keydown', _onPickKeydown, true);
+
+  function _onPickWheel(e) {
+    if (!pickMode) return;
+    if (!e.altKey) return;
+    e.preventDefault(); e.stopPropagation();
+    commitWalk(e.deltaY < 0 ? 'parent' : 'child');
+  }
+  document.addEventListener('wheel', _onPickWheel, { capture: true, passive: false });
+  if (targetDoc !== document) targetDoc.addEventListener('wheel', _onPickWheel, { capture: true, passive: false });
 
   } // ── end boot() ───────────────────────────────────────────────────────────
 
