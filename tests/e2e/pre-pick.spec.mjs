@@ -276,3 +276,33 @@ test('walking to body shows chevrons because it overflows the viewport', async (
   // The fixture has a 2000px filler block so the body/section overflow the viewport. Some chevrons appear.
   await expect(page.locator('.__inspector-pp-chevron')).not.toHaveCount(0);
 });
+
+test('full pre-pick flow: hover → dwell → walk → click commits walked target', async ({ page }) => {
+  await enterPickMode(page);
+  const cell = await page.frameLocator('iframe').locator('[data-pp-test="cell1"]').boundingBox();
+
+  // 1. Hover the cell — layers paint.
+  await page.mouse.move(cell.x + cell.width / 2, cell.y + cell.height / 2);
+  await expect(page.locator('.__inspector-pp-band.padding')).toHaveCount(4);
+  await expect(page.locator('#__inspector-tooltip .pp-title .tag')).toContainText('div.pp-cell');
+
+  // 2. Hold still 2.2s → dwell reveals.
+  await page.waitForTimeout(2200);
+  await expect(page.locator('.__inspector-pp-root')).toHaveClass(/\bdwell\b/);
+
+  // 3. ⌥↑ walks to row.
+  await page.keyboard.down('Alt');
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.up('Alt');
+  await expect(page.locator('#__inspector-tooltip .pp-title .tag')).toContainText('div.pp-row');
+
+  // 4. ⌥↑ again walks to section.
+  await page.keyboard.down('Alt');
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.up('Alt');
+  await expect(page.locator('#__inspector-tooltip .pp-title .tag')).toContainText('section.pp-dashboard');
+
+  // 5. Click commits the walked target (cursor is still on the cell).
+  await page.mouse.click(cell.x + cell.width / 2, cell.y + cell.height / 2);
+  await expect(page.locator('#__inspector-selector-pill')).toContainText(/pp-dashboard/);
+});
