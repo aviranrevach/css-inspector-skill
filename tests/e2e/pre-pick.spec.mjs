@@ -181,11 +181,11 @@ test('dwell reveals breadcrumb + ladder hint + size badges', async ({ page }) =>
   const target = await page.frameLocator('iframe').locator('[data-pp-test="row"]').boundingBox();
   await page.mouse.move(target.x + 10, target.y + 7);
   await expect(page.locator('.__inspector-pp-breadcrumb')).toHaveCount(1);
-  await expect(page.locator('.__inspector-pp-ladder')).toHaveCount(1);
+  await expect(page.locator('#__inspector-tooltip .pp-ladder')).toHaveCount(1);
   await expect(page.locator('.__inspector-pp-dwell-ring')).toHaveCount(1);
   await page.waitForTimeout(2200);
   await expect(page.locator('.__inspector-pp-breadcrumb')).toHaveCSS('opacity', '1');
-  await expect(page.locator('.__inspector-pp-ladder')).toHaveCSS('opacity', '1');
+  await expect(page.locator('#__inspector-tooltip .pp-ladder')).toHaveCSS('opacity', '1');
 });
 
 test('clicking commits the walked target, not the cursor target', async ({ page }) => {

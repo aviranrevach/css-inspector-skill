@@ -2389,12 +2389,14 @@
     const ms = (settings && typeof settings.dwellMs === 'number') ? settings.dwellMs : 2000;
     _dwellTimerId = setTimeout(() => {
       ppRoot.classList.add('dwell');
+      tooltip.classList.add('dwell');
       _dwellTimerId = null;
     }, ms);
   }
   function cancelDwell() {
     if (_dwellTimerId != null) { clearTimeout(_dwellTimerId); _dwellTimerId = null; }
     ppRoot.classList.remove('dwell');
+    tooltip.classList.remove('dwell');
   }
 
   function clearPrePickLayers() {
@@ -2535,12 +2537,6 @@
     }
     crumb.style.cssText += `left:${box.left}px;top:${box.top - 22}px;`;
     ppRoot.appendChild(crumb);
-
-    // Ladder hint — always rendered, only visible during dwell.
-    const ladder = document.createElement('div');
-    ladder.className = '__inspector-pp-ladder';
-    ladder.innerHTML = `<kbd>⌥</kbd> parent <span style="color:#cbd5e1">·</span> <kbd>↑</kbd><kbd>↓</kbd> tree <span style="color:#cbd5e1">·</span> <kbd>Tab</kbd> siblings`;
-    ppRoot.appendChild(ladder);
 
     // Dwell progress ring — anchored next to the target's top-right.
     const ring = document.createElement('div');
