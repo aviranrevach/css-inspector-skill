@@ -1692,8 +1692,15 @@
   display: flex; align-items: center; justify-content: center;
   font: 600 9px Inter, system-ui, sans-serif;
 }
-.__inspector-pp-band.margin    { background: rgba(249,115,22,0.22); color: #c2410c; }
-.__inspector-pp-band.padding   { background: rgba(34,197,94,0.20);  color: #15803d; }
+.__inspector-pp-band.margin    {
+  background:
+    repeating-linear-gradient(135deg,
+      rgba(14, 195, 255, 0.45) 0 1px,
+      transparent 1px 4px),
+    rgba(14, 195, 255, 0.10);
+  color: #075985;
+}
+.__inspector-pp-band.padding   { background: #bae6fd; color: #0369a1; }
 .__inspector-pp-band.gap       {
   background:
     repeating-linear-gradient(135deg,
