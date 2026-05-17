@@ -3590,12 +3590,19 @@
     }
     // From iframe events: already iframe-local.
     if (pickMode) {
-      const cur = _ppCurrentTarget;
       const ddx = (cx - _lastCursorTargetLocal.x);
       const ddy = (cy - _lastCursorTargetLocal.y);
       const moved = Math.hypot(ddx, ddy) > 2;
       _lastCursorTargetLocal = { x: cx, y: cy };
-      if (cur) _updateNearCursor(cur, cx, cy);
+      if (moved && _walkedTarget) {
+        _walkedTarget = null;
+        if (_cursorTarget) {
+          renderPrePickLayers(_cursorTarget);
+          renderRichTooltip(_cursorTarget);
+        }
+      } else if (_ppCurrentTarget) {
+        _updateNearCursor(_ppCurrentTarget, cx, cy);
+      }
       if (moved) startDwellTimer();
     } else {
       _lastCursorTargetLocal = { x: cx, y: cy };

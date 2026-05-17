@@ -235,3 +235,16 @@ test('Tab hops to the next sibling cell', async ({ page }) => {
   await page.keyboard.press('Shift+Tab');
   await expect(page.locator('#__inspector-tooltip .pp-title .tag')).toContainText('div.pp-cell');
 });
+
+test('mouse movement >2px discards the walked target', async ({ page }) => {
+  await enterPickMode(page);
+  const row = await page.frameLocator('iframe').locator('[data-pp-test="row"]').boundingBox();
+  await page.mouse.move(row.x + 10, row.y + 7);
+  await page.keyboard.down('Alt');
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.up('Alt');
+  await expect(page.locator('#__inspector-tooltip .pp-title .tag')).toContainText('section.pp-dashboard');
+  // Twitch the cursor — walk should reset, tag back to row.
+  await page.mouse.move(row.x + 20, row.y + 12);
+  await expect(page.locator('#__inspector-tooltip .pp-title .tag')).toContainText('div.pp-row');
+});
