@@ -2305,11 +2305,55 @@
     ppRoot.style.display = 'none';
   }
 
+  function _bandDiv(klass, rect, value) {
+    const div = document.createElement('div');
+    div.className = '__inspector-pp-band ' + klass;
+    div.style.cssText = `left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;height:${rect.height}px;`;
+    if (value != null) {
+      const lbl = document.createElement('span');
+      lbl.className = 'lbl';
+      lbl.textContent = String(value);
+      div.appendChild(lbl);
+    }
+    return div;
+  }
+
+  function _parsePx(s) {
+    const n = parseFloat(s);
+    return Number.isFinite(n) ? n : 0;
+  }
+
   function renderPrePickLayers(target) {
     if (!target) { clearPrePickLayers(); return; }
     clearPrePickLayers();
     ppRoot.style.display = 'block';
-    // Subsequent tasks fill ppRoot with bands, children, parent, etc.
+
+    const cs = targetWin.getComputedStyle(target);
+    const r  = target.getBoundingClientRect();
+    const margin  = {
+      top:    _parsePx(cs.marginTop),
+      right:  _parsePx(cs.marginRight),
+      bottom: _parsePx(cs.marginBottom),
+      left:   _parsePx(cs.marginLeft),
+    };
+    const padding = {
+      top:    _parsePx(cs.paddingTop),
+      right:  _parsePx(cs.paddingRight),
+      bottom: _parsePx(cs.paddingBottom),
+      left:   _parsePx(cs.paddingLeft),
+    };
+    const { dx, dy } = iframeOffset();
+    const box = { left: r.left + dx, top: r.top + dy, right: r.right + dx, bottom: r.bottom + dy, width: r.width, height: r.height };
+    const bands = bandRectsForBox(box, margin, padding);
+
+    if (margin.top    > 0) ppRoot.appendChild(_bandDiv('margin', bands.marginTop,    margin.top));
+    if (margin.right  > 0) ppRoot.appendChild(_bandDiv('margin', bands.marginRight,  margin.right));
+    if (margin.bottom > 0) ppRoot.appendChild(_bandDiv('margin', bands.marginBottom, margin.bottom));
+    if (margin.left   > 0) ppRoot.appendChild(_bandDiv('margin', bands.marginLeft,   margin.left));
+    if (padding.top    > 0) ppRoot.appendChild(_bandDiv('padding', bands.paddingTop,    padding.top));
+    if (padding.right  > 0) ppRoot.appendChild(_bandDiv('padding', bands.paddingRight,  padding.right));
+    if (padding.bottom > 0) ppRoot.appendChild(_bandDiv('padding', bands.paddingBottom, padding.bottom));
+    if (padding.left   > 0) ppRoot.appendChild(_bandDiv('padding', bands.paddingLeft,   padding.left));
   }
 
   // HTML-escape helper, reused across renderers.
@@ -6961,6 +7005,23 @@
     targetDoc.removeEventListener('contextmenu', onPickRightClick, true);
   }
 
+  // Walk up from el to find the nearest ancestor (including el itself) that has
+  // non-zero margins. Falls back to el when no margined ancestor is found.
+  // This lets renderPrePickLayers show the layout-owner's bands when the cursor
+  // lands on a margin-less flex/grid child whose container carries the margin.
+  function _prePickTarget(el) {
+    let cur = el;
+    while (cur && cur !== targetDoc.body && cur !== targetDoc.documentElement) {
+      const cs = targetWin.getComputedStyle(cur);
+      if (_parsePx(cs.marginTop) > 0 || _parsePx(cs.marginRight) > 0 ||
+          _parsePx(cs.marginBottom) > 0 || _parsePx(cs.marginLeft) > 0) {
+        return cur;
+      }
+      cur = cur.parentElement;
+    }
+    return el;
+  }
+
   function onPickHover(e) {
     // Guard against non-Element targets (text nodes, document, etc.)
     // — closest/classList only exist on Elements.
@@ -6971,7 +7032,7 @@
     );
     e.target.classList.add('__inspector-highlight');
     showPickHoverOverlay(e.target);
-    renderPrePickLayers(e.target);
+    renderPrePickLayers(_prePickTarget(e.target));
     const rect = getFrameRect();
     tooltip.style.display = 'block';
     tooltip.style.left = (rect.left + e.clientX + 12) + 'px';

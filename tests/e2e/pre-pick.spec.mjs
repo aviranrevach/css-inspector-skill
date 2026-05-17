@@ -1,0 +1,66 @@
+// Pre-pick visual layers + tree-walking integration tests.
+// Boots the same fixture-server scaffold as picker.spec.mjs.
+
+import { test, expect } from '@playwright/test';
+import { spawn } from 'node:child_process';
+import { mkdtempSync, copyFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const REPO = join(__dirname, '..', '..');
+const PORT = 8789;
+
+let server;
+let projectDir;
+let baseUrl;
+
+test.beforeAll(async () => {
+  projectDir = mkdtempSync(join(tmpdir(), 'css-inspector-prepick-'));
+  copyFileSync(join(REPO, 'tests', 'fixture.html'), join(projectDir, 'index.html'));
+  mkdirSync(join(projectDir, '.inspector'));
+  copyFileSync(join(REPO, 'overlay.js'), join(projectDir, '.inspector', 'overlay.js'));
+  copyFileSync(join(REPO, 'server.py'), join(projectDir, '.inspector', 'server.py'));
+  writeFileSync(
+    join(projectDir, '.inspector', 'inspector.html'),
+    `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Inspector</title></head>
+<body style="margin:0;padding:0;">
+<script>window.__inspectorCssMap = {};</script>
+<script src="overlay.js"></script>
+<iframe src="../index.html" style="width:100%;height:100vh;border:none;"></iframe>
+</body></html>`
+  );
+  server = spawn('python3',
+    [join(projectDir, '.inspector', 'server.py'), String(PORT), projectDir],
+    { stdio: 'ignore' });
+  baseUrl = `http://localhost:${PORT}`;
+  for (let i = 0; i < 30; i++) {
+    try { const r = await fetch(`${baseUrl}/.inspector/inspector.html`); if (r.ok) return; } catch {}
+    await new Promise(r => setTimeout(r, 100));
+  }
+  throw new Error('server did not start');
+});
+
+test.afterAll(() => {
+  if (server) server.kill();
+  if (projectDir) rmSync(projectDir, { recursive: true, force: true });
+});
+
+async function enterPickMode(page) {
+  await page.goto(`${baseUrl}/.inspector/inspector.html`);
+  await page.waitForFunction(() => {
+    const ifr = document.querySelector('iframe');
+    return ifr && ifr.contentDocument && ifr.contentDocument.querySelector('[data-pp-test="row"]');
+  });
+  await page.click('#__inspector-pick-btn');
+}
+
+test('hovering a row paints 4 margin bands and 4 padding bands', async ({ page }) => {
+  await enterPickMode(page);
+  const target = await page.frameLocator('iframe').locator('[data-pp-test="row"]').boundingBox();
+  await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2);
+  await expect(page.locator('.__inspector-pp-band.margin')).toHaveCount(4);
+  await expect(page.locator('.__inspector-pp-band.padding')).toHaveCount(4);
+});
