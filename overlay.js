@@ -2288,6 +2288,30 @@
   `;
   document.body.appendChild(sprite);
 
+  // Pre-pick layer container — every new layer (bands, child outlines,
+  // parent outline, chevrons, breadcrumb, ladder, dwell ring) mounts here.
+  const ppRoot = document.createElement('div');
+  ppRoot.className = '__inspector-pp-root';
+  ppRoot.style.cssText = 'position:fixed;inset:0;pointer-events:none;display:none;z-index:2147483640;';
+  document.body.appendChild(ppRoot);
+
+  // Promote the existing tooltip to "rich" style; we'll fill it via
+  // renderRichTooltip() instead of the old textContent assignment.
+  tooltip.classList.add('rich');
+
+  function clearPrePickLayers() {
+    while (ppRoot.firstChild) ppRoot.removeChild(ppRoot.firstChild);
+    ppRoot.classList.remove('dwell');
+    ppRoot.style.display = 'none';
+  }
+
+  function renderPrePickLayers(target) {
+    if (!target) { clearPrePickLayers(); return; }
+    clearPrePickLayers();
+    ppRoot.style.display = 'block';
+    // Subsequent tasks fill ppRoot with bands, children, parent, etc.
+  }
+
   // HTML-escape helper, reused across renderers.
   const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
@@ -6930,6 +6954,7 @@
       el.classList.remove('__inspector-highlight')
     );
     hidePickHoverOverlay();
+    clearPrePickLayers();
     tooltip.style.display = 'none';
     targetDoc.removeEventListener('mouseover', onPickHover, true);
     targetDoc.removeEventListener('click', onPickClick, true);
@@ -6946,6 +6971,7 @@
     );
     e.target.classList.add('__inspector-highlight');
     showPickHoverOverlay(e.target);
+    renderPrePickLayers(e.target);
     const rect = getFrameRect();
     tooltip.style.display = 'block';
     tooltip.style.left = (rect.left + e.clientX + 12) + 'px';
