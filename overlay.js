@@ -2441,6 +2441,32 @@
 
     // Initial near-cursor highlight based on most recent cursor position.
     _updateNearCursor(target, _lastCursorTargetLocal.x, _lastCursorTargetLocal.y);
+
+    // Ancestor breadcrumb — sits 30px above the target's top-left.
+    const crumb = document.createElement('div');
+    crumb.className = '__inspector-pp-breadcrumb';
+    const text = buildBreadcrumb(target, { maxDepth: 4 });
+    const lastSep = text.lastIndexOf(' › ');
+    if (lastSep > 0) {
+      crumb.innerHTML = `<b>${_esc(text.slice(0, lastSep + 3))}</b>${_esc(text.slice(lastSep + 3))}`;
+    } else {
+      crumb.textContent = text;
+    }
+    crumb.style.cssText += `left:${box.left}px;top:${box.top - 22}px;`;
+    ppRoot.appendChild(crumb);
+
+    // Ladder hint — always rendered, only visible during dwell.
+    const ladder = document.createElement('div');
+    ladder.className = '__inspector-pp-ladder';
+    ladder.innerHTML = `<kbd>⌥</kbd> parent <span style="color:#cbd5e1">·</span> <kbd>↑</kbd><kbd>↓</kbd> tree <span style="color:#cbd5e1">·</span> <kbd>Tab</kbd> siblings`;
+    ppRoot.appendChild(ladder);
+
+    // Dwell progress ring — anchored next to the target's top-right.
+    const ring = document.createElement('div');
+    ring.className = '__inspector-pp-dwell-ring';
+    ring.style.cssText += `left:${box.left + box.width - 16}px;top:${box.top - 20}px;`;
+    ppRoot.appendChild(ring);
+
     startDwellTimer();
   }
 

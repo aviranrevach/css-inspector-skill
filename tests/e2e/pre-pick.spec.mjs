@@ -171,3 +171,15 @@ test('after 2.2s of stillness the .__inspector-pp-root gains the .dwell class', 
   await page.mouse.move(target.x + 15, target.y + 12);
   await expect(page.locator('.__inspector-pp-root')).not.toHaveClass(/\bdwell\b/);
 });
+
+test('dwell reveals breadcrumb + ladder hint + size badges', async ({ page }) => {
+  await enterPickMode(page);
+  const target = await page.frameLocator('iframe').locator('[data-pp-test="row"]').boundingBox();
+  await page.mouse.move(target.x + 10, target.y + 7);
+  await expect(page.locator('.__inspector-pp-breadcrumb')).toHaveCount(1);
+  await expect(page.locator('.__inspector-pp-ladder')).toHaveCount(1);
+  await expect(page.locator('.__inspector-pp-dwell-ring')).toHaveCount(1);
+  await page.waitForTimeout(2200);
+  await expect(page.locator('.__inspector-pp-breadcrumb')).toHaveCSS('opacity', '1');
+  await expect(page.locator('.__inspector-pp-ladder')).toHaveCSS('opacity', '1');
+});
