@@ -1910,10 +1910,7 @@
   padding: 4px 0 2px;
   font: 400 10px Inter, system-ui, sans-serif;
   color: #64748b;
-  opacity: 0;
-  transition: opacity 0.4s ease-out;
 }
-#__inspector-tooltip.rich.dwell .pp-ladder { opacity: 1; }
 #__inspector-tooltip.rich .pp-ladder .grp { display: inline-flex; align-items: center; gap: 4px; }
 #__inspector-tooltip.rich .pp-ladder .sep { color: #cbd5e1; margin: 0 -2px; }
 #__inspector-tooltip.rich .pp-ladder kbd {
@@ -2784,7 +2781,7 @@
     const summary = contentSummary(target);
     html += _sectionHtml('CONTENT', 's-content', [{ k: 'Shape', v: _esc(summary) }]);
 
-    // WALK section header + inline ladder (dwell-revealed via tooltip.dwell .pp-ladder).
+    // WALK section header + inline ladder (always visible while the tooltip is shown).
     html += `
       <div class="pp-section">
         <svg aria-hidden="true"><use href="#s-walk"/></svg>
