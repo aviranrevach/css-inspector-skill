@@ -137,8 +137,31 @@
     return `${kids.length} ${kids.length === 1 ? 'child' : 'children'}`;
   }
 
+  function buildBreadcrumb(el, opts) {
+    if (!el || !el.tagName) return '';
+    const maxDepth = (opts && opts.maxDepth) || 4;
+    const parts = [];
+    let cur = el;
+    let truncated = false;
+    while (cur && cur.tagName) {
+      let label = cur.tagName.toLowerCase();
+      if (cur.id) label = `${label}#${cur.id}`;
+      else {
+        const cls = Array.from(cur.classList || []).filter(c => c && !c.startsWith('__inspector'))[0];
+        if (cls) label = `${label}.${cls}`;
+      }
+      parts.unshift(label);
+      if (parts.length >= maxDepth) {
+        if (cur.parentElement && cur.parentElement.tagName) truncated = true;
+        break;
+      }
+      cur = cur.parentElement;
+    }
+    return truncated ? `… › ${parts.join(' › ')}` : parts.join(' › ');
+  }
+
   if (typeof module !== 'undefined') {
-    module.exports = { computeSelector, typeIconKey, headingLevel, isTextBearing, closestChildIndex, contrastRatio, wcagBadge, effectiveBackground, layoutNonDefaults, contentSummary };
+    module.exports = { computeSelector, typeIconKey, headingLevel, isTextBearing, closestChildIndex, contrastRatio, wcagBadge, effectiveBackground, layoutNonDefaults, contentSummary, buildBreadcrumb };
   }
 
   // ── Browser-only from here ────────────────────────────────────────────────

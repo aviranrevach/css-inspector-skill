@@ -183,3 +183,25 @@ test('contentSummary describes children + text shape', () => {
   // Children only
   assert.equal(contentSummary(elt([child(), child(), child()])), '3 children');
 });
+
+test('buildBreadcrumb stringifies up to maxDepth ancestors', () => {
+  const { buildBreadcrumb } = load();
+  // Mock chain: body > main > section.dashboard > div.row
+  const mk = (tag, cls = '', id = '') => ({ tagName: tag, classList: cls ? cls.split(' ') : [], id, parentElement: null });
+  const body = mk('BODY');
+  const main = mk('MAIN'); main.parentElement = body;
+  const section = mk('SECTION', 'dashboard'); section.parentElement = main;
+  const row = mk('DIV', 'row'); row.parentElement = section;
+
+  assert.equal(
+    buildBreadcrumb(row, { maxDepth: 4 }),
+    'body › main › section.dashboard › div.row'
+  );
+  // maxDepth 2 truncates from the left
+  assert.equal(
+    buildBreadcrumb(row, { maxDepth: 2 }),
+    '… › section.dashboard › div.row'
+  );
+  // null target
+  assert.equal(buildBreadcrumb(null), '');
+});
