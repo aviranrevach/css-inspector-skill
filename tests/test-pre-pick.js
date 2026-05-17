@@ -57,3 +57,20 @@ test('headingLevel returns 1..6 for h1..h6, null otherwise', () => {
   assert.equal(headingLevel('div'), null);
   assert.equal(headingLevel(null), null);
 });
+
+test('isTextBearing detects non-empty direct text node children', () => {
+  const { isTextBearing } = load();
+
+  // Helper: build a tiny element-like object with a childNodes array.
+  const elt = (children) => ({ childNodes: children });
+  const text = (s) => ({ nodeType: 3, textContent: s });
+  const div = () => ({ nodeType: 1, tagName: 'DIV' });
+
+  assert.equal(isTextBearing(elt([text('hello')])), true);
+  assert.equal(isTextBearing(elt([text('  '), div()])), false); // whitespace-only doesn't count
+  assert.equal(isTextBearing(elt([div(), text('label')])), true); // mixed content counts
+  assert.equal(isTextBearing(elt([div()])), false);
+  assert.equal(isTextBearing(elt([])), false);
+  assert.equal(isTextBearing(null), false);
+  assert.equal(isTextBearing(undefined), false);
+});

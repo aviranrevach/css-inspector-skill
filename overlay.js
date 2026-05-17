@@ -42,8 +42,19 @@
     return m ? Number(m[1]) : null;
   }
 
+  function isTextBearing(el) {
+    if (!el || !el.childNodes) return false;
+    for (let i = 0; i < el.childNodes.length; i++) {
+      const n = el.childNodes[i];
+      if (n && n.nodeType === 3 && n.textContent && n.textContent.trim().length > 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   if (typeof module !== 'undefined') {
-    module.exports = { computeSelector, typeIconKey, headingLevel };
+    module.exports = { computeSelector, typeIconKey, headingLevel, isTextBearing };
   }
 
   // ── Browser-only from here ────────────────────────────────────────────────
