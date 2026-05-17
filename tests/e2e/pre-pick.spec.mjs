@@ -196,3 +196,28 @@ test('clicking commits the walked target, not the cursor target', async ({ page 
   await page.mouse.click(row.x + 10, row.y + 7);
   await expect(page.locator('#__inspector-selector-pill')).toContainText(/pp-dashboard/);
 });
+
+test('⌥↑ walks to parent and re-paints layers around it', async ({ page }) => {
+  await enterPickMode(page);
+  const row = await page.frameLocator('iframe').locator('[data-pp-test="row"]').boundingBox();
+  await page.mouse.move(row.x + 10, row.y + 7);
+  await expect(page.locator('#__inspector-tooltip .pp-title .tag')).toContainText('div.pp-row');
+  await page.keyboard.down('Alt');
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.up('Alt');
+  await expect(page.locator('#__inspector-tooltip .pp-title .tag')).toContainText('section.pp-dashboard');
+});
+
+test('⌥↓ dives into the child nearest the cursor', async ({ page }) => {
+  await enterPickMode(page);
+  const cell = await page.frameLocator('iframe').locator('[data-pp-test="cell1"]').boundingBox();
+  // Land cursor on the row's padding region first so target is the row.
+  const row = await page.frameLocator('iframe').locator('[data-pp-test="row"]').boundingBox();
+  await page.mouse.move(row.x + 10, row.y + 7);
+  await expect(page.locator('#__inspector-tooltip .pp-title .tag')).toContainText('div.pp-row');
+  // Without moving cursor onto a cell, dive into the nearest child (cell0 since cursor is near left edge).
+  await page.keyboard.down('Alt');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.up('Alt');
+  await expect(page.locator('#__inspector-tooltip .pp-title .tag')).toContainText('div.pp-cell');
+});

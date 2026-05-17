@@ -7593,6 +7593,32 @@
     switchTab('design');
   }
 
+  function commitWalk(direction) {
+    const start = _walkedTarget || _cursorTarget;
+    if (!start) return;
+    const next = nextWalkTarget(start, direction, _lastCursorTargetLocal);
+    if (!next) return;
+    _walkedTarget = next;
+    renderPrePickLayers(next);
+    renderRichTooltip(next);
+  }
+
+  function _onPickKeydown(e) {
+    if (!pickMode) return;
+    if (!e.altKey) return;
+    let dir = null;
+    if (e.key === 'ArrowUp')    dir = 'parent';
+    if (e.key === 'ArrowDown')  dir = 'child';
+    if (e.key === 'ArrowLeft')  dir = 'prev';
+    if (e.key === 'ArrowRight') dir = 'next';
+    if (!dir) return;
+    e.preventDefault();
+    e.stopPropagation();
+    commitWalk(dir);
+  }
+  document.addEventListener('keydown', _onPickKeydown, true);
+  if (targetDoc !== document) targetDoc.addEventListener('keydown', _onPickKeydown, true);
+
   } // ── end boot() ───────────────────────────────────────────────────────────
 
 })();
