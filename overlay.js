@@ -22,8 +22,28 @@
     return parts.join(' > ');
   }
 
+  function typeIconKey(tagName) {
+    if (!tagName) return 'block';
+    const t = String(tagName).toLowerCase();
+    if (t === 'span' || t === 'em' || t === 'strong' || t === 'b' || t === 'i') return 'inline';
+    if (t === 'button') return 'button';
+    if (t === 'a') return 'link';
+    if (t === 'img' || t === 'svg' || t === 'picture') return 'image';
+    if (/^h[1-6]$/.test(t)) return 'heading';
+    if (t === 'input' || t === 'textarea' || t === 'select') return 'input';
+    if (t === 'ul' || t === 'ol' || t === 'li') return 'list';
+    if (t === 'nav' || t === 'header' || t === 'footer') return 'nav';
+    return 'block';
+  }
+
+  function headingLevel(tagName) {
+    if (!tagName) return null;
+    const m = /^h([1-6])$/i.exec(String(tagName));
+    return m ? Number(m[1]) : null;
+  }
+
   if (typeof module !== 'undefined') {
-    module.exports = { computeSelector };
+    module.exports = { computeSelector, typeIconKey, headingLevel };
   }
 
   // ── Browser-only from here ────────────────────────────────────────────────
