@@ -102,3 +102,11 @@ test('the child closest to the cursor gets a near-cursor highlight', async ({ pa
   const count = await page.locator('.__inspector-pp-child.near').count();
   expect(count).toBeLessThanOrEqual(1);
 });
+
+test('rich tooltip shows tag, size, and type icon', async ({ page }) => {
+  await enterPickMode(page);
+  const target = await page.frameLocator('iframe').locator('[data-pp-test="row"]').boundingBox();
+  await page.mouse.move(target.x + 10, target.y + 7);
+  await expect(page.locator('#__inspector-tooltip .pp-title .tag')).toHaveText(/div\.pp-row/);
+  await expect(page.locator('#__inspector-tooltip .pp-title .icon use')).toHaveAttribute('href', '#i-block');
+});

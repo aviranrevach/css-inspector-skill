@@ -2428,6 +2428,40 @@
     _updateNearCursor(target, _lastCursorTargetLocal.x, _lastCursorTargetLocal.y);
   }
 
+  function _esc(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+  function _tooltipTitleIcon(target) {
+    const key = typeIconKey(target.tagName);
+    if (key === 'heading') {
+      const lvl = headingLevel(target.tagName) || 1;
+      return `<span class="icon glyph-text">H${lvl}</span>`;
+    }
+    return `<svg class="icon" aria-hidden="true"><use href="#i-${key}"/></svg>`;
+  }
+
+  function _tooltipSelector(el) {
+    let t = el.tagName.toLowerCase();
+    if (el.id) return `${t}#${el.id}`;
+    const cls = Array.from(el.classList || []).filter(c => c && !c.startsWith('__inspector'))[0];
+    return cls ? `${t}.${cls}` : t;
+  }
+
+  function renderRichTooltip(target) {
+    if (!target) { tooltip.style.display = 'none'; return; }
+    const r = target.getBoundingClientRect();
+    const titleIcon = _tooltipTitleIcon(target);
+    const sel = _tooltipSelector(target);
+    const size = `${Math.round(r.width)} × ${Math.round(r.height)}`;
+    tooltip.innerHTML = `
+      <div class="pp-title">
+        ${titleIcon}
+        <span class="tag">${_esc(sel)}</span>
+        <span class="size">${size}</span>
+      </div>
+    `;
+    tooltip.style.display = 'block';
+  }
+
   // HTML-escape helper, reused across renderers.
   const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
@@ -7094,11 +7128,10 @@
     e.target.classList.add('__inspector-highlight');
     showPickHoverOverlay(e.target);
     renderPrePickLayers(e.target);
+    renderRichTooltip(e.target);
     const rect = getFrameRect();
-    tooltip.style.display = 'block';
     tooltip.style.left = (rect.left + e.clientX + 12) + 'px';
-    tooltip.style.top = (rect.top + e.clientY + 12) + 'px';
-    tooltip.textContent = computeSelector(e.target);
+    tooltip.style.top  = (rect.top  + e.clientY + 12) + 'px';
   }
 
   // Tags treated as a "region" / "area" when the user copies an intro.
