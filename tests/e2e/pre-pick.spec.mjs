@@ -132,3 +132,22 @@ test('hovering a button shows the ACCESSIBILITY section with Contrast, Role, Foc
   await expect(tip).toContainText('Save changes'); // Name
   await expect(tip).toContainText('AA'); // Contrast badge
 });
+
+test('hovering a wrapper with overflow:hidden shows the LAYOUT section', async ({ page }) => {
+  await enterPickMode(page);
+  const target = await page.frameLocator('iframe').locator('[data-pp-test="wrap"]').boundingBox();
+  await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2);
+  const tip = page.locator('#__inspector-tooltip');
+  await expect(tip).toContainText('LAYOUT');
+  await expect(tip).toContainText('Position');
+  await expect(tip).toContainText('Overflow');
+  await expect(tip).toContainText('hidden');
+});
+
+test('hovering a row with all default layout omits the LAYOUT section', async ({ page }) => {
+  await enterPickMode(page);
+  const target = await page.frameLocator('iframe').locator('[data-pp-test="row"]').boundingBox();
+  await page.mouse.move(target.x + 10, target.y + 7);
+  const tip = page.locator('#__inspector-tooltip');
+  await expect(tip).not.toContainText('LAYOUT');
+});

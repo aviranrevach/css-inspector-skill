@@ -2529,6 +2529,24 @@
     return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : null;
   }
 
+  function _layoutRows(cs) {
+    const non = layoutNonDefaults({
+      position: cs.position,
+      overflow: cs.overflow,
+      zIndex:   cs.zIndex,
+      transform: cs.transform,
+      maxWidth: cs.maxWidth,
+    });
+    if (!non) return null;
+    const rows = [];
+    if (non.position)  rows.push({ k: 'Position',  v: non.position });
+    if (non.overflow)  rows.push({ k: 'Overflow',  v: `${non.overflow} ${non.overflow === 'hidden' ? '<span class="pp-warn">⚠</span>' : ''}`.trim() });
+    if (non.zIndex)    rows.push({ k: 'z-index',   v: non.zIndex });
+    if (non.transform) rows.push({ k: 'Transform', v: _esc(non.transform) });
+    if (non.maxWidth)  rows.push({ k: 'Max-width', v: non.maxWidth });
+    return rows;
+  }
+
   function _sectionHtml(name, iconId, rows) {
     if (!rows || rows.length === 0) return '';
     let html = `<div class="pp-section"><svg aria-hidden="true"><use href="#${iconId}"/></svg><span class="label">${name}</span><span class="rule"></span></div>`;
@@ -2583,6 +2601,8 @@
     }
     const a11yRows = _accessibilityRows(target, cs);
     html += _sectionHtml('ACCESSIBILITY', 's-a11y', a11yRows);
+    const layoutRows = _layoutRows(cs);
+    html += _sectionHtml('LAYOUT', 's-layout', layoutRows);
     tooltip.innerHTML = html;
     tooltip.style.display = 'block';
   }
