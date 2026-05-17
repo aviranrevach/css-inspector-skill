@@ -22,8 +22,230 @@
     return parts.join(' > ');
   }
 
+  function typeIconKey(tagName) {
+    if (!tagName) return 'block';
+    const t = String(tagName).toLowerCase();
+    if (t === 'span' || t === 'em' || t === 'strong' || t === 'b' || t === 'i') return 'inline';
+    if (t === 'button') return 'button';
+    if (t === 'a') return 'link';
+    if (t === 'img' || t === 'svg' || t === 'picture') return 'image';
+    if (/^h[1-6]$/.test(t)) return 'heading';
+    if (t === 'input' || t === 'textarea' || t === 'select') return 'input';
+    if (t === 'ul' || t === 'ol' || t === 'li') return 'list';
+    if (t === 'nav' || t === 'header' || t === 'footer') return 'nav';
+    return 'block';
+  }
+
+  function headingLevel(tagName) {
+    if (!tagName) return null;
+    const m = /^h([1-6])$/i.exec(String(tagName));
+    return m ? Number(m[1]) : null;
+  }
+
+  function isTextBearing(el) {
+    if (!el || !el.childNodes) return false;
+    for (let i = 0; i < el.childNodes.length; i++) {
+      const n = el.childNodes[i];
+      if (n && n.nodeType === 3 && n.textContent && n.textContent.trim().length > 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function closestChildIndex(rects, cursor) {
+    if (!rects || rects.length === 0) return -1;
+    let bestIdx = -1;
+    let bestDist = Infinity;
+    for (let i = 0; i < rects.length; i++) {
+      const r = rects[i];
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+      const dx = cx - cursor.x;
+      const dy = cy - cursor.y;
+      const d2 = dx * dx + dy * dy; // squared distance is enough for ranking
+      if (d2 < bestDist) { bestDist = d2; bestIdx = i; }
+    }
+    return bestIdx;
+  }
+
+
+  // sRGB → relative luminance per WCAG 2.1.
+  function _relLuminance(rgb) {
+    const a = rgb.map(v => {
+      v /= 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
+  }
+
+  function contrastRatio(fgRgb, bgRgb) {
+    const l1 = _relLuminance(fgRgb);
+    const l2 = _relLuminance(bgRgb);
+    const [lighter, darker] = l1 > l2 ? [l1, l2] : [l2, l1];
+    return (lighter + 0.05) / (darker + 0.05);
+  }
+
+  function wcagBadge(ratio, fontPx, fontWeight) {
+    const large = (fontPx >= 18) || (fontPx >= 14 && (fontWeight | 0) >= 700);
+    if (large) {
+      if (ratio >= 4.5) return 'AAA';
+      if (ratio >= 3)   return 'AA-large';
+      return 'FAIL';
+    }
+    if (ratio >= 7)   return 'AAA';
+    if (ratio >= 4.5) return 'AA';
+    return 'FAIL';
+  }
+
+  function effectiveBackground(getStyle, el) {
+    let cur = el;
+    while (cur) {
+      const bg = getStyle(cur).backgroundColor;
+      if (bg && bg !== 'transparent' && !/rgba\([^)]*,\s*0\s*\)$/.test(bg)) {
+        return bg;
+      }
+      cur = cur.parentElement;
+    }
+    return 'rgb(255, 255, 255)';
+  }
+
+  function layoutNonDefaults(style) {
+    if (!style) return null;
+    const out = {};
+    if (style.position && style.position !== 'static')         out.position  = style.position;
+    if (style.overflow && style.overflow !== 'visible')        out.overflow  = style.overflow;
+    if (style.zIndex   && style.zIndex   !== 'auto')           out.zIndex    = style.zIndex;
+    if (style.transform && style.transform !== 'none')         out.transform = style.transform;
+    if (style.maxWidth && style.maxWidth !== 'none')           out.maxWidth  = style.maxWidth;
+    return Object.keys(out).length === 0 ? null : out;
+  }
+
+  function contentSummary(el) {
+    if (!el) return '';
+    const tag = (el.tagName || '').toUpperCase();
+    if (tag === 'IMG' || tag === 'SVG' || tag === 'PICTURE') return 'image · raster';
+    const kids = el.children ? Array.from(el.children) : [];
+    const ownText = isTextBearing(el) ? (el.textContent || '').trim().length : 0;
+    if (kids.length === 0 && ownText === 0) return 'empty wrapper';
+    if (kids.length === 1 && ownText === 0) {
+      const childTag = (kids[0].tagName || '').toUpperCase();
+      if (childTag === 'SVG' || childTag === 'IMG') return 'icon only';
+    }
+    if (kids.length === 0 && ownText > 0) return `text only · ${ownText} chars`;
+    if (kids.length >= 1 && ownText > 0) return `${kids.length} ${kids.length === 1 ? 'child' : 'children'} · ${ownText} chars`;
+    return `${kids.length} ${kids.length === 1 ? 'child' : 'children'}`;
+  }
+
+  function buildBreadcrumb(el, opts) {
+    if (!el || !el.tagName) return '';
+    const maxDepth = (opts && opts.maxDepth) || 4;
+    const parts = [];
+    let cur = el;
+    let truncated = false;
+    while (cur && cur.tagName) {
+      let label = cur.tagName.toLowerCase();
+      if (cur.id) label = `${label}#${cur.id}`;
+      else {
+        const cls = Array.from(cur.classList || []).filter(c => c && !c.startsWith('__inspector'))[0];
+        if (cls) label = `${label}.${cls}`;
+      }
+      parts.unshift(label);
+      if (parts.length >= maxDepth) {
+        if (cur.parentElement && cur.parentElement.tagName) truncated = true;
+        break;
+      }
+      cur = cur.parentElement;
+    }
+    return truncated ? `… › ${parts.join(' › ')}` : parts.join(' › ');
+  }
+
+  function bandRectsForBox(box, margin, padding) {
+    const m = margin || { top:0, right:0, bottom:0, left:0 };
+    const p = padding || { top:0, right:0, bottom:0, left:0 };
+    return {
+      marginTop:    { left: box.left - m.left,  top: box.top - m.top,  width: box.width + m.left + m.right, height: m.top },
+      marginRight:  { left: box.right,          top: box.top - m.top,  width: m.right,                       height: box.height + m.top + m.bottom },
+      marginBottom: { left: box.left - m.left,  top: box.bottom,       width: box.width + m.left + m.right, height: m.bottom },
+      marginLeft:   { left: box.left - m.left,  top: box.top - m.top,  width: m.left,                        height: box.height + m.top + m.bottom },
+      paddingTop:    { left: box.left,                top: box.top,               width: box.width,                 height: p.top },
+      paddingRight:  { left: box.right - p.right,     top: box.top + p.top,       width: p.right,                   height: box.height - p.top - p.bottom },
+      paddingBottom: { left: box.left,                top: box.bottom - p.bottom, width: box.width,                 height: p.bottom },
+      paddingLeft:   { left: box.left,                top: box.top + p.top,       width: p.left,                    height: box.height - p.top - p.bottom },
+    };
+  }
+
+  function gapStripsForFlexRow(parentRect, childRects, gap, direction) {
+    if (!gap || gap <= 0) return [];
+    if (!childRects || childRects.length < 2) return [];
+    const strips = [];
+    if (direction === 'column') {
+      for (let i = 0; i < childRects.length - 1; i++) {
+        const a = childRects[i], b = childRects[i + 1];
+        strips.push({
+          left: parentRect.left,
+          top:  a.bottom,
+          width: parentRect.width,
+          height: b.top - a.bottom,
+          value: gap,
+        });
+      }
+    } else {
+      for (let i = 0; i < childRects.length - 1; i++) {
+        const a = childRects[i], b = childRects[i + 1];
+        strips.push({
+          left:  a.right,
+          top:   parentRect.top,
+          width: b.left - a.right,
+          height: parentRect.height,
+          value: gap,
+        });
+      }
+    }
+    return strips;
+  }
+  function fullyOffscreen(rect, viewport) {
+    return rect.bottom < 0 || rect.top > viewport.height
+        || rect.right  < 0 || rect.left > viewport.width;
+  }
+
+  function chevronEdgesForViewport(rect, viewport) {
+    return {
+      top:    rect.top    < 0,
+      bottom: rect.bottom > viewport.height,
+      left:   rect.left   < 0,
+      right:  rect.right  > viewport.width,
+    };
+  }
+
+  function nextWalkTarget(el, direction, cursor) {
+    if (!el) return null;
+    if (direction === 'parent') {
+      const p = el.parentElement;
+      if (!p || !p.tagName) return null;
+      const t = p.tagName.toUpperCase();
+      if (t === 'HTML') return null; // don't climb past body
+      return p;
+    }
+    if (direction === 'child') {
+      const kids = el.children ? Array.from(el.children) : [];
+      if (kids.length === 0) return null;
+      const rects = kids.map(k => k.getBoundingClientRect());
+      const idx = closestChildIndex(rects, cursor || { x: 0, y: 0 });
+      return idx >= 0 ? kids[idx] : null;
+    }
+    const parent = el.parentElement;
+    if (!parent || !parent.children) return null;
+    const siblings = Array.from(parent.children);
+    const i = siblings.indexOf(el);
+    if (i < 0) return null;
+    if (direction === 'next') return siblings[i + 1] || null;
+    if (direction === 'prev') return siblings[i - 1] || null;
+    return null;
+  }
+
   if (typeof module !== 'undefined') {
-    module.exports = { computeSelector };
+    module.exports = { computeSelector, typeIconKey, headingLevel, isTextBearing, closestChildIndex, contrastRatio, wcagBadge, effectiveBackground, layoutNonDefaults, contentSummary, buildBreadcrumb, bandRectsForBox, gapStripsForFlexRow, fullyOffscreen, chevronEdgesForViewport, nextWalkTarget };
   }
 
   // ── Browser-only from here ────────────────────────────────────────────────
@@ -1462,6 +1684,260 @@
     .inspector-sv.modified input {
       color: #DA7756;
     }
+
+/* ────── Pre-pick layers ────── */
+.__inspector-pp-band {
+  position: fixed; pointer-events: none;
+  z-index: 2147483640;
+  display: flex; align-items: center; justify-content: center;
+  font: 600 9px Inter, system-ui, sans-serif;
+}
+.__inspector-pp-band.margin    {
+  background:
+    repeating-linear-gradient(135deg,
+      rgba(14, 195, 255, 0.45) 0 1px,
+      transparent 1px 4px),
+    rgba(14, 195, 255, 0.10);
+  color: #075985;
+}
+.__inspector-pp-band.padding   { background: #bae6fd; color: #0369a1; }
+.__inspector-pp-band.gap       {
+  background:
+    repeating-linear-gradient(135deg,
+      rgba(168,85,247,0.22) 0 4px,
+      rgba(168,85,247,0.10) 4px 8px);
+  color: #6d28d9;
+}
+.__inspector-pp-band .lbl {
+  padding: 1px 5px; border-radius: 3px; background: rgba(255,255,255,0.95);
+}
+.__inspector-pp-parent {
+  position: fixed; pointer-events: none;
+  border: 1px dotted #cbd5e1;
+  border-radius: 6px;
+  z-index: 2147483639;
+}
+.__inspector-pp-parent::before {
+  content: attr(data-label);
+  position: absolute; top: -10px; left: 8px;
+  background: #ffffff;
+  padding: 0 6px;
+  font: 600 9px Inter, system-ui, sans-serif;
+  color: #94a3b8;
+}
+.__inspector-pp-child {
+  position: fixed; pointer-events: none;
+  border: 1px dashed rgba(59,130,246,0.55);
+  border-radius: 4px;
+  z-index: 2147483641;
+}
+.__inspector-pp-child .tag {
+  position: absolute; top: -10px; left: 4px;
+  background: #eff6ff;
+  border: 1px solid rgba(59,130,246,0.25);
+  color: #1d4ed8;
+  font: 600 9px Inter, system-ui, sans-serif;
+  padding: 1px 5px; border-radius: 3px;
+}
+.__inspector-pp-child .size {
+  position: absolute; bottom: -10px; right: 4px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  font: 400 9px Inter, system-ui, sans-serif;
+  padding: 1px 5px; border-radius: 3px;
+  opacity: 0; transition: opacity 0.4s ease-out;
+}
+.__inspector-pp-root.dwell .__inspector-pp-child .size { opacity: 1; }
+
+.__inspector-pp-chevron {
+  position: fixed; pointer-events: none;
+  color: #3b82f6;
+  font: 700 14px Inter, system-ui, sans-serif;
+  z-index: 2147483642;
+}
+.__inspector-pp-breadcrumb {
+  position: fixed; pointer-events: none;
+  font: 400 9px Inter, system-ui, sans-serif;
+  color: #94a3b8;
+  z-index: 2147483643;
+  opacity: 0; transition: opacity 0.4s ease-out;
+}
+.__inspector-pp-breadcrumb b { color: #64748b; }
+.__inspector-pp-root.dwell .__inspector-pp-breadcrumb { opacity: 1; }
+
+.__inspector-pp-dwell-ring {
+  position: fixed;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  border: 1.5px solid #cbd5e1;
+  border-top-color: #3b82f6;
+  border-right-color: #3b82f6;
+  animation: __inspector-pp-spin 2s linear infinite;
+  opacity: .65;
+  z-index: 2147483643;
+  pointer-events: none;
+}
+@keyframes __inspector-pp-spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+
+/* ────── Rich tooltip — replaces the simple text tooltip ────── */
+#__inspector-tooltip.rich {
+  background: #ffffff;
+  border: 1px solid #e6e8eb;
+  border-radius: 7px;
+  box-shadow: 0 8px 22px rgba(15,23,42,0.10);
+  padding: 8px 10px;
+  font: 400 11px Inter, system-ui, sans-serif;
+  color: #1f2937;
+  max-width: 280px;
+  line-height: 1.45;
+}
+#__inspector-tooltip.rich .pp-title {
+  display: grid; grid-template-columns: 18px auto 1fr;
+  align-items: center; gap: 6px;
+  margin-bottom: 4px;
+}
+#__inspector-tooltip.rich .pp-title .icon { width: 14px; height: 14px; color: #3b82f6; }
+#__inspector-tooltip.rich .pp-title .tag  { color: #7c3aed; font-weight: 700; font-size: 12px; }
+#__inspector-tooltip.rich .pp-title .size { color: #0f172a; text-align: right; font-weight: 500; }
+#__inspector-tooltip.rich .pp-title .glyph-text {
+  font: 700 10px ui-monospace, "SF Mono", Menlo, monospace;
+  background: #eff6ff;
+  border: 1px solid rgba(59,130,246,0.30);
+  border-radius: 3px;
+  color: #1d4ed8;
+  padding: 0 3px;
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 16px;
+}
+#__inspector-tooltip.rich .pp-kv {
+  display: grid; grid-template-columns: 86px 1fr;
+  column-gap: 8px; padding: 1px 0;
+}
+#__inspector-tooltip.rich .pp-kv .k { color: #64748b; }
+#__inspector-tooltip.rich .pp-kv .v { color: #0f172a; text-align: right; }
+#__inspector-tooltip.rich .pp-kv .v.muted { color: #94a3b8; }
+#__inspector-tooltip.rich .pp-section {
+  display: grid; grid-template-columns: 11px auto 1fr;
+  align-items: center; gap: 5px;
+  margin-top: 8px; margin-bottom: 2px;
+}
+#__inspector-tooltip.rich .pp-section svg { width: 10px; height: 10px; color: #94a3b8; }
+#__inspector-tooltip.rich .pp-section .label {
+  font: 700 9px Inter, system-ui, sans-serif;
+  color: #94a3b8;
+  letter-spacing: .1em;
+}
+#__inspector-tooltip.rich .pp-section .rule { height: 1px; background: #e6e8eb; }
+#__inspector-tooltip.rich .pp-swatch {
+  display: inline-block; width: 9px; height: 9px;
+  border-radius: 2px; margin-right: 5px;
+  border: 1px solid rgba(15,23,42,0.08);
+  vertical-align: -1px;
+}
+#__inspector-tooltip.rich .pp-aa {
+  display: inline-block;
+  border: 1px solid #cbd5e1;
+  border-radius: 3px;
+  padding: 0 4px;
+  font: 500 10px Inter, system-ui, sans-serif;
+  color: #0f172a;
+  margin-right: 5px;
+  background: #ffffff;
+}
+#__inspector-tooltip.rich .pp-ok   { color: #16a34a; font-weight: 700; }
+#__inspector-tooltip.rich .pp-warn { color: #f97316; font-weight: 700; margin-left: 4px; }
+#__inspector-tooltip.rich .pp-no   { color: #94a3b8; font-size: 13px; vertical-align: -1px; }
+
+/* ────── Tooltip mini box-model diagram ────── */
+#__inspector-tooltip.rich .pp-boxmodel {
+  margin: 8px 0;
+  border-radius: 4px;
+  padding: 16px 22px;
+  position: relative;
+  font: 600 10px Inter, system-ui, sans-serif;
+  background:
+    repeating-linear-gradient(135deg,
+      rgba(14, 195, 255, 0.45) 0 1px,
+      transparent 1px 4px),
+    rgba(14, 195, 255, 0.10);
+  border: 1px dashed #0ec3ff;
+  color: #075985;
+}
+#__inspector-tooltip.rich .pp-boxmodel .lbl-margin {
+  position: absolute; top: 2px; left: 6px;
+  font: 700 8px Inter, system-ui, sans-serif;
+  letter-spacing: 0.12em;
+  color: #075985;
+}
+#__inspector-tooltip.rich .pp-boxmodel .m-t { position: absolute; top:    8px;  left: 50%;  transform: translate(-50%, -50%); }
+#__inspector-tooltip.rich .pp-boxmodel .m-b { position: absolute; bottom: 8px;  left: 50%;  transform: translate(-50%,  50%); }
+#__inspector-tooltip.rich .pp-boxmodel .m-l { position: absolute; left:   11px; top:  50%;  transform: translate(-50%, -50%); }
+#__inspector-tooltip.rich .pp-boxmodel .m-r { position: absolute; right:  11px; top:  50%;  transform: translate( 50%, -50%); }
+
+#__inspector-tooltip.rich .pp-boxmodel .padding-ring {
+  background: #bae6fd;
+  border: 2px solid #3B82F6;
+  border-radius: 3px;
+  padding: 16px 18px;
+  position: relative;
+  color: #0369a1;
+  font-weight: 600;
+}
+#__inspector-tooltip.rich .pp-boxmodel .padding-ring .lbl-padding {
+  position: absolute; top: 2px; left: 6px;
+  font: 700 8px Inter, system-ui, sans-serif;
+  letter-spacing: 0.12em;
+  color: #0369a1;
+}
+#__inspector-tooltip.rich .pp-boxmodel .padding-ring .p-t { position: absolute; top:    8px; left: 50%; transform: translate(-50%, -50%); color: #0369a1; }
+#__inspector-tooltip.rich .pp-boxmodel .padding-ring .p-b { position: absolute; bottom: 8px; left: 50%; transform: translate(-50%,  50%); color: #0369a1; }
+#__inspector-tooltip.rich .pp-boxmodel .padding-ring .p-l { position: absolute; left:   9px; top:  50%; transform: translate(-50%, -50%); color: #0369a1; }
+#__inspector-tooltip.rich .pp-boxmodel .padding-ring .p-r { position: absolute; right:  9px; top:  50%; transform: translate( 50%, -50%); color: #0369a1; }
+#__inspector-tooltip.rich .pp-boxmodel .padding-ring .content {
+  background: #ffffff;
+  border: 0;
+  border-radius: 2px;
+  padding: 10px 0;
+  text-align: center;
+  color: #0f172a;
+  font: 600 12px Inter, system-ui, sans-serif;
+}
+
+/* ────── Inline ladder section (replaces floating banner) ────── */
+#__inspector-tooltip.rich .pp-ladder {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 4px 0 2px;
+  font: 400 10px Inter, system-ui, sans-serif;
+  color: #64748b;
+  opacity: 0;
+  transition: opacity 0.4s ease-out;
+}
+#__inspector-tooltip.rich.dwell .pp-ladder { opacity: 1; }
+#__inspector-tooltip.rich .pp-ladder .grp { display: inline-flex; align-items: center; gap: 4px; }
+#__inspector-tooltip.rich .pp-ladder .sep { color: #cbd5e1; margin: 0 -2px; }
+#__inspector-tooltip.rich .pp-ladder kbd {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 14px; height: 14px;
+  padding: 0 4px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 3px;
+  font: 600 9px ui-monospace, "SF Mono", Menlo, monospace;
+  color: #0f172a;
+  line-height: 1;
+}
+
+/* ────── Near-cursor child dot (replaces .near outline) ────── */
+.__inspector-pp-child .dot {
+  position: absolute;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #3b82f6;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
   `;
 
   // ── Inject styles ──────────────────────────────────────────────────────────
@@ -1520,6 +1996,10 @@
   // ── State ──────────────────────────────────────────────────────────────────
   let selectedElement = null;
   let pickMode = false;
+  let _lastCursorTargetLocal = { x: 0, y: 0 };
+  let _walkedTarget = null;
+  let _cursorTarget = null;
+  function _effectiveTarget() { return _walkedTarget || _cursorTarget; }
   // Multi-select state. When `multiPickMode` is true, picks accumulate
   // into `selectedElements` instead of replacing the primary. The primary
   // (`selectedElement`) tracks the most-recently-picked element so single-
@@ -1832,6 +2312,505 @@
   tooltip.id = '__inspector-tooltip';
   document.body.appendChild(tooltip);
 
+  // SVG icon sprite for pre-pick tooltips. One <svg> with hidden <symbol>s
+  // is appended to the document so any element can `<use href="#i-...">` it.
+  const sprite = document.createElement('div');
+  sprite.id = '__inspector-pp-sprite';
+  sprite.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden;';
+  sprite.innerHTML = `
+    <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <symbol id="i-block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+        </symbol>
+        <symbol id="i-inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/>
+        </symbol>
+        <symbol id="i-button" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="8" width="18" height="9" rx="3"/><circle cx="9" cy="12.5" r="1"/>
+        </symbol>
+        <symbol id="i-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 1 0-7.07-7.07L11 5"/>
+          <path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 1 0 7.07 7.07L13 19"/>
+        </symbol>
+        <symbol id="i-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/>
+          <path d="m21 15-5-5L5 21"/>
+        </symbol>
+        <symbol id="i-input" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="6" width="18" height="12" rx="2"/><line x1="7" y1="10" x2="7" y2="14"/>
+        </symbol>
+        <symbol id="i-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/>
+          <circle cx="4.5" cy="6" r="1.5"/><circle cx="4.5" cy="12" r="1.5"/><circle cx="4.5" cy="18" r="1.5"/>
+        </symbol>
+        <symbol id="i-nav" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/>
+        </symbol>
+        <symbol id="s-a11y" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="5" r="1.5"/><path d="M8 9h8"/><path d="M12 9v6"/><path d="M9 21l3-6 3 6"/>
+        </symbol>
+        <symbol id="s-layout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="9" x2="9" y2="21"/>
+        </symbol>
+        <symbol id="s-content" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="15" y2="12"/><line x1="4" y1="18" x2="18" y2="18"/>
+        </symbol>
+        <symbol id="s-walk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="6" width="20" height="12" rx="2"/>
+          <line x1="6"  y1="10" x2="6"  y2="10"/>
+          <line x1="10" y1="10" x2="10" y2="10"/>
+          <line x1="14" y1="10" x2="14" y2="10"/>
+          <line x1="18" y1="10" x2="18" y2="10"/>
+          <line x1="7"  y1="14" x2="17" y2="14"/>
+        </symbol>
+      </defs>
+    </svg>
+  `;
+  document.body.appendChild(sprite);
+
+  // Pre-pick layer container — every new layer (bands, child outlines,
+  // parent outline, chevrons, breadcrumb, ladder, dwell ring) mounts here.
+  const ppRoot = document.createElement('div');
+  ppRoot.className = '__inspector-pp-root';
+  ppRoot.style.cssText = 'position:fixed;inset:0;pointer-events:none;display:none;z-index:2147483640;';
+  document.body.appendChild(ppRoot);
+
+  // Promote the existing tooltip to "rich" style; we'll fill it via
+  // renderRichTooltip() instead of the old textContent assignment.
+  tooltip.classList.add('rich');
+
+  let _ppCurrentTarget = null;
+  let _dwellTimerId = null;
+
+  function startDwellTimer() {
+    cancelDwell();
+    const ms = (settings && typeof settings.dwellMs === 'number') ? settings.dwellMs : 2000;
+    _dwellTimerId = setTimeout(() => {
+      ppRoot.classList.add('dwell');
+      tooltip.classList.add('dwell');
+      _dwellTimerId = null;
+    }, ms);
+  }
+  function cancelDwell() {
+    if (_dwellTimerId != null) { clearTimeout(_dwellTimerId); _dwellTimerId = null; }
+    ppRoot.classList.remove('dwell');
+    tooltip.classList.remove('dwell');
+  }
+
+  function clearPrePickLayers() {
+    while (ppRoot.firstChild) ppRoot.removeChild(ppRoot.firstChild);
+    ppRoot.classList.remove('dwell');
+    ppRoot.style.display = 'none';
+    _ppCurrentTarget = null;
+    cancelDwell();
+  }
+
+  function _bandDiv(klass, rect, value) {
+    const div = document.createElement('div');
+    div.className = '__inspector-pp-band ' + klass;
+    div.style.cssText = `left:${rect.left}px;top:${rect.top}px;width:${rect.width}px;height:${rect.height}px;`;
+    if (value != null) {
+      const lbl = document.createElement('span');
+      lbl.className = 'lbl';
+      lbl.textContent = String(value);
+      div.appendChild(lbl);
+    }
+    return div;
+  }
+
+  function _parsePx(s) {
+    const n = parseFloat(s);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  function _updateNearCursor(target, cx, cy) {
+    const kids = ppRoot.querySelectorAll('.__inspector-pp-child');
+    if (!kids.length) return;
+    const childRects = Array.from(target.children).map(k => {
+      const kr = k.getBoundingClientRect();
+      return { left: kr.left, top: kr.top, right: kr.right, bottom: kr.bottom, width: kr.width, height: kr.height };
+    });
+    const idx = closestChildIndex(childRects, { x: cx, y: cy });
+    kids.forEach((node, i) => {
+      const existing = node.querySelector('.dot');
+      if (i === idx) {
+        if (!existing) {
+          const dot = document.createElement('div');
+          dot.className = 'dot';
+          node.appendChild(dot);
+        }
+      } else if (existing) {
+        existing.remove();
+      }
+    });
+  }
+
+  function renderPrePickLayers(target) {
+    if (!target) { clearPrePickLayers(); return; }
+    _ppCurrentTarget = target;
+    clearPrePickLayers();
+    ppRoot.style.display = 'block';
+
+    const cs = targetWin.getComputedStyle(target);
+    const r  = target.getBoundingClientRect();
+    const margin  = {
+      top:    _parsePx(cs.marginTop),
+      right:  _parsePx(cs.marginRight),
+      bottom: _parsePx(cs.marginBottom),
+      left:   _parsePx(cs.marginLeft),
+    };
+    const padding = {
+      top:    _parsePx(cs.paddingTop),
+      right:  _parsePx(cs.paddingRight),
+      bottom: _parsePx(cs.paddingBottom),
+      left:   _parsePx(cs.paddingLeft),
+    };
+    const { dx, dy } = iframeOffset();
+    const box = { left: r.left + dx, top: r.top + dy, right: r.right + dx, bottom: r.bottom + dy, width: r.width, height: r.height };
+    const bands = bandRectsForBox(box, margin, padding);
+
+    if (margin.top    > 0) ppRoot.appendChild(_bandDiv('margin', bands.marginTop,    margin.top));
+    if (margin.right  > 0) ppRoot.appendChild(_bandDiv('margin', bands.marginRight,  margin.right));
+    if (margin.bottom > 0) ppRoot.appendChild(_bandDiv('margin', bands.marginBottom, margin.bottom));
+    if (margin.left   > 0) ppRoot.appendChild(_bandDiv('margin', bands.marginLeft,   margin.left));
+    if (padding.top    > 0) ppRoot.appendChild(_bandDiv('padding', bands.paddingTop,    padding.top));
+    if (padding.right  > 0) ppRoot.appendChild(_bandDiv('padding', bands.paddingRight,  padding.right));
+    if (padding.bottom > 0) ppRoot.appendChild(_bandDiv('padding', bands.paddingBottom, padding.bottom));
+    if (padding.left   > 0) ppRoot.appendChild(_bandDiv('padding', bands.paddingLeft,   padding.left));
+
+    // Gap strips — only when display is flex/grid and gap is non-zero.
+    const display = cs.display;
+    const gap = _parsePx(cs.gap);
+    const isRow = /^row/.test(cs.flexDirection || 'row');
+    if (gap > 0 && (display.includes('flex') || display.includes('grid'))) {
+      const kids = Array.from(target.children);
+      const childRects = kids.map(k => {
+        const kr = k.getBoundingClientRect();
+        return {
+          left:  kr.left  + dx,
+          top:   kr.top   + dy,
+          right: kr.right + dx,
+          bottom:kr.bottom+ dy,
+          width: kr.width,
+          height:kr.height,
+        };
+      });
+      const strips = gapStripsForFlexRow(box, childRects, gap, isRow ? 'row' : 'column');
+      for (const s of strips) ppRoot.appendChild(_bandDiv('gap', s, s.value));
+    }
+
+    // Parent outline — faint dotted ring around the parent box.
+    const parent = target.parentElement;
+    if (parent && parent.tagName && parent.tagName.toUpperCase() !== 'HTML') {
+      const pr = parent.getBoundingClientRect();
+      const po = document.createElement('div');
+      po.className = '__inspector-pp-parent';
+      po.style.cssText = `left:${pr.left + dx}px;top:${pr.top + dy}px;width:${pr.width}px;height:${pr.height}px;`;
+      const pcls = Array.from(parent.classList || []).filter(c => c && !c.startsWith('__inspector'))[0];
+      const plabel = parent.tagName.toLowerCase() + (pcls ? '.' + pcls : '') + ' · parent';
+      po.setAttribute('data-label', plabel);
+      ppRoot.appendChild(po);
+    }
+
+    // Direct children — dashed blue outline with tag chip on top-left.
+    const kids = Array.from(target.children).filter(k => k.tagName !== 'SCRIPT' && k.tagName !== 'STYLE');
+    kids.forEach(k => {
+      const kr = k.getBoundingClientRect();
+      const out = document.createElement('div');
+      out.className = '__inspector-pp-child';
+      out.style.cssText = `left:${kr.left + dx}px;top:${kr.top + dy}px;width:${kr.width}px;height:${kr.height}px;`;
+      const tagSpan = document.createElement('span');
+      tagSpan.className = 'tag';
+      const kcls = Array.from(k.classList || []).filter(c => c && !c.startsWith('__inspector'))[0];
+      tagSpan.textContent = k.tagName.toLowerCase() + (kcls ? '.' + kcls : '');
+      out.appendChild(tagSpan);
+      const sizeSpan = document.createElement('span');
+      sizeSpan.className = 'size';
+      sizeSpan.textContent = `${Math.round(kr.width)} × ${Math.round(kr.height)}`;
+      out.appendChild(sizeSpan);
+      ppRoot.appendChild(out);
+    });
+
+    // Initial near-cursor highlight based on most recent cursor position.
+    _updateNearCursor(target, _lastCursorTargetLocal.x, _lastCursorTargetLocal.y);
+
+    // Ancestor breadcrumb — sits 30px above the target's top-left.
+    const crumb = document.createElement('div');
+    crumb.className = '__inspector-pp-breadcrumb';
+    const text = buildBreadcrumb(target, { maxDepth: 4 });
+    const lastSep = text.lastIndexOf(' › ');
+    if (lastSep > 0) {
+      crumb.innerHTML = `<b>${_esc(text.slice(0, lastSep + 3))}</b>${_esc(text.slice(lastSep + 3))}`;
+    } else {
+      crumb.textContent = text;
+    }
+    crumb.style.cssText += `left:${box.left}px;top:${box.top - 22}px;`;
+    ppRoot.appendChild(crumb);
+
+    // Dwell progress ring — anchored next to the target's top-right.
+    const ring = document.createElement('div');
+    ring.className = '__inspector-pp-dwell-ring';
+    ring.style.cssText += `left:${box.left + box.width - 16}px;top:${box.top - 20}px;`;
+    ppRoot.appendChild(ring);
+
+    const viewport = { width: targetWin.innerWidth, height: targetWin.innerHeight };
+    const chevrons = chevronEdgesForViewport({ top: r.top, bottom: r.bottom, left: r.left, right: r.right }, viewport);
+    if (chevrons.top || chevrons.bottom || chevrons.left || chevrons.right) {
+      const midX = Math.max(8, Math.min(viewport.width  - 8, box.left + box.width / 2));
+      const midY = Math.max(8, Math.min(viewport.height - 8, box.top  + box.height / 2));
+      if (chevrons.top) {
+        const c = document.createElement('div');
+        c.className = '__inspector-pp-chevron';
+        c.textContent = '↑';
+        c.style.cssText += `left:${midX - 7}px;top:4px;`;
+        ppRoot.appendChild(c);
+      }
+      if (chevrons.bottom) {
+        const c = document.createElement('div');
+        c.className = '__inspector-pp-chevron';
+        c.textContent = '↓';
+        c.style.cssText += `left:${midX - 7}px;top:${viewport.height - 22}px;`;
+        ppRoot.appendChild(c);
+      }
+      if (chevrons.left) {
+        const c = document.createElement('div');
+        c.className = '__inspector-pp-chevron';
+        c.textContent = '←';
+        c.style.cssText += `left:4px;top:${midY - 9}px;`;
+        ppRoot.appendChild(c);
+      }
+      if (chevrons.right) {
+        const c = document.createElement('div');
+        c.className = '__inspector-pp-chevron';
+        c.textContent = '→';
+        c.style.cssText += `left:${viewport.width - 22}px;top:${midY - 9}px;`;
+        ppRoot.appendChild(c);
+      }
+    }
+
+    startDwellTimer();
+  }
+
+  function _esc(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+  function _tooltipTitleIcon(target) {
+    const key = typeIconKey(target.tagName);
+    if (key === 'heading') {
+      const lvl = headingLevel(target.tagName) || 1;
+      return `<span class="icon glyph-text">H${lvl}</span>`;
+    }
+    return `<svg class="icon" aria-hidden="true"><use href="#i-${key}"/></svg>`;
+  }
+
+  function _tooltipSelector(el) {
+    let t = el.tagName.toLowerCase();
+    if (el.id) return `${t}#${el.id}`;
+    const cls = Array.from(el.classList || []).filter(c => c && !c.startsWith('__inspector'))[0];
+    return cls ? `${t}.${cls}` : t;
+  }
+
+  function _detectHandlers(target, cs) {
+    const out = [];
+    const inline = ['onclick','onmousedown','onmouseup','onkeydown','onkeyup','onmouseenter','onmouseleave'];
+    inline.forEach(k => { if (target[k]) out.push(k.replace(/^on/, '')); });
+    if (cs.cursor === 'pointer') out.push('cursor: pointer');
+    // Heuristic CSS rule scan — wrapped in try/catch for cross-origin sheets.
+    try {
+      const sheets = targetDoc.styleSheets;
+      for (let i = 0; i < sheets.length; i++) {
+        let rules;
+        try { rules = sheets[i].cssRules; } catch (_) { continue; }
+        if (!rules) continue;
+        for (let j = 0; j < rules.length; j++) {
+          const sel = rules[j].selectorText;
+          if (!sel) continue;
+          if (/:(hover|focus|active)\b/.test(sel)) {
+            const base = sel.replace(/:(hover|focus|active)\b/g, '');
+            try {
+              if (target.matches(base)) { out.push(':hover/:focus style'); j = rules.length; i = sheets.length; break; }
+            } catch (_) {}
+          }
+        }
+      }
+    } catch (_) {}
+    return Array.from(new Set(out));
+  }
+
+  function _ariaAttrs(target) {
+    const out = {};
+    const a = target.attributes || [];
+    for (let i = 0; i < a.length; i++) {
+      if (a[i].name === 'aria-label' || a[i].name === 'aria-labelledby' || a[i].name === 'aria-describedby') {
+        out[a[i].name] = a[i].value;
+      }
+    }
+    return out;
+  }
+
+  function _accessibilityRows(target, cs) {
+    const role = target.getAttribute('role') || (function inferred() {
+      const tag = target.tagName.toLowerCase();
+      if (tag === 'button') return 'button';
+      if (tag === 'a' && target.hasAttribute('href')) return 'link';
+      if (/^h[1-6]$/.test(tag)) return 'heading';
+      if (tag === 'img') return 'img';
+      if (tag === 'nav') return 'navigation';
+      return 'generic';
+    })();
+    const name = target.getAttribute('aria-label') || (isTextBearing(target) ? (target.textContent || '').trim() : '');
+    const focusable = target.tabIndex >= 0;
+    const handlers = _detectHandlers(target, cs);
+    const aria = _ariaAttrs(target);
+
+    const interesting = role !== 'generic' || isTextBearing(target) || handlers.length > 0;
+    if (!interesting) return null;
+
+    const rows = [];
+    if (isTextBearing(target)) {
+      const bg = effectiveBackground(t => targetWin.getComputedStyle(t), target);
+      const fgRgb = _rgbTriple(cs.color);
+      const bgRgb = _rgbTriple(bg);
+      const fontPx = _parsePx(cs.fontSize);
+      const fontWeight = parseInt(cs.fontWeight, 10) || 400;
+      if (fgRgb && bgRgb) {
+        const ratio = contrastRatio(fgRgb, bgRgb);
+        const badge = wcagBadge(ratio, fontPx, fontWeight);
+        const cls = badge === 'FAIL' ? 'pp-warn' : 'pp-ok';
+        rows.push({ k: 'Contrast', v: `<span class="pp-aa">Aa</span>${ratio.toFixed(1)} <span class="${cls}">${badge}</span>` });
+      }
+    }
+    if (name)            rows.push({ k: 'Name', v: `"${_esc(name.length > 28 ? name.slice(0, 27) + '…' : name)}"` });
+    rows.push({ k: 'Role', v: role });
+    rows.push({ k: 'Focusable', v: focusable ? '<span class="pp-ok">✓</span>' : '<span class="pp-no">⊘</span>' });
+    if (handlers.length) rows.push({ k: 'Handlers', v: _esc(handlers.join(' · ')) });
+    for (const key in aria) rows.push({ k: key, v: `"${_esc(aria[key])}"` });
+    return rows;
+  }
+
+  function _rgbTriple(rgb) {
+    const m = /rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/.exec(rgb || '');
+    return m ? [Number(m[1]), Number(m[2]), Number(m[3])] : null;
+  }
+
+  function _layoutRows(cs) {
+    const non = layoutNonDefaults({
+      position: cs.position,
+      overflow: cs.overflow,
+      zIndex:   cs.zIndex,
+      transform: cs.transform,
+      maxWidth: cs.maxWidth,
+    });
+    if (!non) return null;
+    const rows = [];
+    if (non.position)  rows.push({ k: 'Position',  v: non.position });
+    if (non.overflow)  rows.push({ k: 'Overflow',  v: `${non.overflow} ${non.overflow === 'hidden' ? '<span class="pp-warn">⚠</span>' : ''}`.trim() });
+    if (non.zIndex)    rows.push({ k: 'z-index',   v: non.zIndex });
+    if (non.transform) rows.push({ k: 'Transform', v: _esc(non.transform) });
+    if (non.maxWidth)  rows.push({ k: 'Max-width', v: non.maxWidth });
+    return rows;
+  }
+
+  function _boxModelHtml(cs, rect) {
+    const px = (s) => Math.round(_parsePx(s));
+    const mt = px(cs.marginTop),    mr = px(cs.marginRight),  mb = px(cs.marginBottom),  ml = px(cs.marginLeft);
+    const pt = px(cs.paddingTop),   pr = px(cs.paddingRight), pb = px(cs.paddingBottom), pl = px(cs.paddingLeft);
+    const w  = Math.round(rect.width), h = Math.round(rect.height);
+    return `
+      <div class="pp-boxmodel">
+        <span class="lbl-margin">MARGIN</span>
+        <span class="m-t">${mt}</span><span class="m-b">${mb}</span>
+        <span class="m-l">${ml}</span><span class="m-r">${mr}</span>
+        <div class="padding-ring">
+          <span class="lbl-padding">PADDING</span>
+          <span class="p-t">${pt}</span><span class="p-b">${pb}</span>
+          <span class="p-l">${pl}</span><span class="p-r">${pr}</span>
+          <div class="content">${w} × ${h}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  function _sectionHtml(name, iconId, rows) {
+    if (!rows || rows.length === 0) return '';
+    let html = `<div class="pp-section"><svg aria-hidden="true"><use href="#${iconId}"/></svg><span class="label">${name}</span><span class="rule"></span></div>`;
+    for (const row of rows) html += `<div class="pp-kv"><span class="k">${row.k}</span><span class="v">${row.v}</span></div>`;
+    return html;
+  }
+
+  function renderRichTooltip(target) {
+    if (!target) { tooltip.style.display = 'none'; return; }
+    const r  = target.getBoundingClientRect();
+    const cs = targetWin.getComputedStyle(target);
+    const titleIcon = _tooltipTitleIcon(target);
+    const sel  = _tooltipSelector(target);
+    const size = `${Math.round(r.width)} × ${Math.round(r.height)}`;
+
+    const rows = [];
+    const isTxt = isTextBearing(target);
+    if (isTxt) {
+      const fontSize = _parsePx(cs.fontSize);
+      const fontWeight = cs.fontWeight;
+      const family = (cs.fontFamily || '').split(',')[0].replace(/['"]/g, '').trim();
+      rows.push({ k: 'Color', v: `<span class="pp-swatch" style="background:${cs.color}"></span>${_rgbToHex(cs.color)}` });
+      rows.push({ k: 'Font',  v: `${fontSize}/${fontWeight} ${_esc(family)}` });
+    }
+    const bg = cs.backgroundColor;
+    if (bg && bg !== 'transparent' && !/rgba\([^)]*,\s*0\s*\)$/.test(bg)) {
+      rows.push({ k: 'Background', v: `<span class="pp-swatch" style="background:${bg}"></span>${_rgbToHex(bg)}` });
+    }
+    const radius = _parsePx(cs.borderRadius);
+    if (radius > 0) rows.push({ k: 'Radius', v: String(radius) });
+
+    let html = `
+      <div class="pp-title">
+        ${titleIcon}
+        <span class="tag">${_esc(sel)}</span>
+        <span class="size">${size}</span>
+      </div>
+    `;
+    for (const row of rows) {
+      html += `<div class="pp-kv"><span class="k">${row.k}</span><span class="v">${row.v}</span></div>`;
+    }
+
+    // Mini box-model diagram — replaces the previous Padding/Margin text rows.
+    html += _boxModelHtml(cs, r);
+
+    const a11yRows = _accessibilityRows(target, cs);
+    html += _sectionHtml('ACCESSIBILITY', 's-a11y', a11yRows);
+    const layoutRows = _layoutRows(cs);
+    html += _sectionHtml('LAYOUT', 's-layout', layoutRows);
+    const summary = contentSummary(target);
+    html += _sectionHtml('CONTENT', 's-content', [{ k: 'Shape', v: _esc(summary) }]);
+
+    // WALK section header + inline ladder (dwell-revealed via tooltip.dwell .pp-ladder).
+    html += `
+      <div class="pp-section">
+        <svg aria-hidden="true"><use href="#s-walk"/></svg>
+        <span class="label">WALK</span>
+        <span class="rule"></span>
+      </div>
+      <div class="pp-ladder">
+        <span class="grp"><kbd>⌥</kbd> parent</span>
+        <span class="sep">·</span>
+        <span class="grp"><kbd>↑</kbd><kbd>↓</kbd> tree</span>
+        <span class="sep">·</span>
+        <span class="grp"><kbd>Tab</kbd> siblings</span>
+      </div>
+    `;
+
+    tooltip.innerHTML = html;
+    tooltip.style.display = 'block';
+  }
+
+  function _rgbToHex(rgb) {
+    const m = /rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/.exec(rgb || '');
+    if (!m) return rgb || '';
+    const [, r, g, b] = m;
+    return '#' + [r, g, b].map(v => Number(v).toString(16).padStart(2, '0').toUpperCase()).join('');
+  }
+
   // HTML-escape helper, reused across renderers.
   const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
@@ -1879,6 +2858,9 @@
     // When on (default), the picked element shows a persistent 2px blue
     // outline so users can see what's selected. Off = no outline.
     showSelectedOutline: true,
+    // Dwell duration in ms — how long the cursor must hold still before
+    // the breadcrumb / size badges / ladder hint fade in during pick mode.
+    dwellMs: 2000,
   };
   function loadSettings() {
     const fromHost = (typeof window !== 'undefined' && window.__inspectorSettings) || null;
@@ -2759,6 +3741,24 @@
       cx -= dx; cy -= dy;
     }
     // From iframe events: already iframe-local.
+    if (pickMode) {
+      const ddx = (cx - _lastCursorTargetLocal.x);
+      const ddy = (cy - _lastCursorTargetLocal.y);
+      const moved = Math.hypot(ddx, ddy) > 2;
+      _lastCursorTargetLocal = { x: cx, y: cy };
+      if (moved && _walkedTarget) {
+        _walkedTarget = null;
+        if (_cursorTarget) {
+          renderPrePickLayers(_cursorTarget);
+          renderRichTooltip(_cursorTarget);
+        }
+      } else if (_ppCurrentTarget) {
+        _updateNearCursor(_ppCurrentTarget, cx, cy);
+      }
+      if (moved) startDwellTimer();
+    } else {
+      _lastCursorTargetLocal = { x: cx, y: cy };
+    }
     updateArmedLevel(cx, cy);
     updateSelectionHover(cx, cy);
   }
@@ -2768,8 +3768,19 @@
   }
   // Reposition armed indicator + FABs + selection overlays on scroll /
   // resize so they track the live element bounds.
-  document.addEventListener('scroll', () => { renderArmedIndicator(); positionFabs(); repositionSelectionOverlays(); }, true);
-  window.addEventListener('resize', () => { renderArmedIndicator(); positionFabs(); repositionSelectionOverlays(); });
+  document.addEventListener('scroll', () => {
+    renderArmedIndicator(); positionFabs(); repositionSelectionOverlays();
+    if (pickMode && _ppCurrentTarget) renderPrePickLayers(_ppCurrentTarget);
+  }, true);
+  window.addEventListener('resize', () => {
+    renderArmedIndicator(); positionFabs(); repositionSelectionOverlays();
+    if (pickMode && _ppCurrentTarget) renderPrePickLayers(_ppCurrentTarget);
+  });
+  if (targetDoc !== document) {
+    targetDoc.addEventListener('scroll', () => {
+      if (pickMode && _ppCurrentTarget) renderPrePickLayers(_ppCurrentTarget);
+    }, true);
+  }
   root.querySelector('#__inspector-deselect').addEventListener('click', (e) => {
     e.stopPropagation();
     clearSelection();
@@ -6474,6 +7485,7 @@
       el.classList.remove('__inspector-highlight')
     );
     hidePickHoverOverlay();
+    clearPrePickLayers();
     tooltip.style.display = 'none';
     targetDoc.removeEventListener('mouseover', onPickHover, true);
     targetDoc.removeEventListener('click', onPickClick, true);
@@ -6490,11 +7502,13 @@
     );
     e.target.classList.add('__inspector-highlight');
     showPickHoverOverlay(e.target);
+    _cursorTarget = e.target;
+    _walkedTarget = null;
+    renderPrePickLayers(_cursorTarget);
+    renderRichTooltip(e.target);
     const rect = getFrameRect();
-    tooltip.style.display = 'block';
     tooltip.style.left = (rect.left + e.clientX + 12) + 'px';
-    tooltip.style.top = (rect.top + e.clientY + 12) + 'px';
-    tooltip.textContent = computeSelector(e.target);
+    tooltip.style.top  = (rect.top  + e.clientY + 12) + 'px';
   }
 
   // Tags treated as a "region" / "area" when the user copies an intro.
@@ -6722,6 +7736,14 @@
   }
 
   function onPickClick(e) {
+    const _commit = _effectiveTarget();
+    if (_commit && _commit !== e.target) {
+      e.preventDefault();
+      e.stopPropagation();
+      // Defer to existing pick-click handling but with the walked target.
+      const synthetic = { target: _commit, preventDefault: () => {}, stopPropagation: () => {}, clientX: e.clientX, clientY: e.clientY };
+      return onPickClick(synthetic);
+    }
     if (e.target.closest('#__inspector-root')) return;
     e.preventDefault();
     e.stopPropagation();
@@ -6740,6 +7762,52 @@
     exitPickMode();
     switchTab('design');
   }
+
+  function commitWalk(direction) {
+    const start = _walkedTarget || _cursorTarget;
+    if (!start) return;
+    const next = nextWalkTarget(start, direction, _lastCursorTargetLocal);
+    if (!next) return;
+    _walkedTarget = next;
+    renderPrePickLayers(next);
+    renderRichTooltip(next);
+    const r = next.getBoundingClientRect();
+    const vw = targetWin.innerWidth;
+    const vh = targetWin.innerHeight;
+    if (fullyOffscreen(r, { width: vw, height: vh })) {
+      try { next.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' }); } catch (_) {}
+      // After the scroll completes, refresh layer positions on the next frame.
+      requestAnimationFrame(() => { renderPrePickLayers(next); renderRichTooltip(next); });
+    }
+  }
+
+  function _onPickKeydown(e) {
+    if (!pickMode) return;
+    if (e.key === 'Tab') {
+      e.preventDefault(); e.stopPropagation();
+      return commitWalk(e.shiftKey ? 'prev' : 'next');
+    }
+    if (!e.altKey) return;
+    let dir = null;
+    if (e.key === 'ArrowUp')    dir = 'parent';
+    if (e.key === 'ArrowDown')  dir = 'child';
+    if (e.key === 'ArrowLeft')  dir = 'prev';
+    if (e.key === 'ArrowRight') dir = 'next';
+    if (!dir) return;
+    e.preventDefault(); e.stopPropagation();
+    commitWalk(dir);
+  }
+  document.addEventListener('keydown', _onPickKeydown, true);
+  if (targetDoc !== document) targetDoc.addEventListener('keydown', _onPickKeydown, true);
+
+  function _onPickWheel(e) {
+    if (!pickMode) return;
+    if (!e.altKey) return;
+    e.preventDefault(); e.stopPropagation();
+    commitWalk(e.deltaY < 0 ? 'parent' : 'child');
+  }
+  document.addEventListener('wheel', _onPickWheel, { capture: true, passive: false });
+  if (targetDoc !== document) targetDoc.addEventListener('wheel', _onPickWheel, { capture: true, passive: false });
 
   } // ── end boot() ───────────────────────────────────────────────────────────
 
