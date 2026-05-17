@@ -183,3 +183,16 @@ test('dwell reveals breadcrumb + ladder hint + size badges', async ({ page }) =>
   await expect(page.locator('.__inspector-pp-breadcrumb')).toHaveCSS('opacity', '1');
   await expect(page.locator('.__inspector-pp-ladder')).toHaveCSS('opacity', '1');
 });
+
+test('clicking commits the walked target, not the cursor target', async ({ page }) => {
+  await enterPickMode(page);
+  const row = await page.frameLocator('iframe').locator('[data-pp-test="row"]').boundingBox();
+  await page.mouse.move(row.x + 10, row.y + 7);
+  // Walk to parent (section) once; cursor stays on the row.
+  await page.keyboard.down('Alt');
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.up('Alt');
+  // Now click. The committed selection should be section.pp-dashboard, not div.pp-row.
+  await page.mouse.click(row.x + 10, row.y + 7);
+  await expect(page.locator('#__inspector-selector-pill')).toContainText(/pp-dashboard/);
+});

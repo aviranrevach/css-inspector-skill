@@ -1927,6 +1927,9 @@
   let selectedElement = null;
   let pickMode = false;
   let _lastCursorTargetLocal = { x: 0, y: 0 };
+  let _walkedTarget = null;
+  let _cursorTarget = null;
+  function _effectiveTarget() { return _walkedTarget || _cursorTarget; }
   // Multi-select state. When `multiPickMode` is true, picks accumulate
   // into `selectedElements` instead of replacing the primary. The primary
   // (`selectedElement`) tracks the most-recently-picked element so single-
@@ -7329,7 +7332,9 @@
     );
     e.target.classList.add('__inspector-highlight');
     showPickHoverOverlay(e.target);
-    renderPrePickLayers(e.target);
+    _cursorTarget = e.target;
+    _walkedTarget = null;
+    renderPrePickLayers(_cursorTarget);
     renderRichTooltip(e.target);
     const rect = getFrameRect();
     tooltip.style.left = (rect.left + e.clientX + 12) + 'px';
@@ -7561,6 +7566,14 @@
   }
 
   function onPickClick(e) {
+    const _commit = _effectiveTarget();
+    if (_commit && _commit !== e.target) {
+      e.preventDefault();
+      e.stopPropagation();
+      // Defer to existing pick-click handling but with the walked target.
+      const synthetic = { target: _commit, preventDefault: () => {}, stopPropagation: () => {}, clientX: e.clientX, clientY: e.clientY };
+      return onPickClick(synthetic);
+    }
     if (e.target.closest('#__inspector-root')) return;
     e.preventDefault();
     e.stopPropagation();
