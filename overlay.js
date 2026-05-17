@@ -204,9 +204,22 @@
     }
     return strips;
   }
+  function fullyOffscreen(rect, viewport) {
+    return rect.bottom < 0 || rect.top > viewport.height
+        || rect.right  < 0 || rect.left > viewport.width;
+  }
+
+  function chevronEdgesForViewport(rect, viewport) {
+    return {
+      top:    rect.top    < 0,
+      bottom: rect.bottom > viewport.height,
+      left:   rect.left   < 0,
+      right:  rect.right  > viewport.width,
+    };
+  }
 
   if (typeof module !== 'undefined') {
-    module.exports = { computeSelector, typeIconKey, headingLevel, isTextBearing, closestChildIndex, contrastRatio, wcagBadge, effectiveBackground, layoutNonDefaults, contentSummary, buildBreadcrumb, bandRectsForBox, gapStripsForFlexRow };
+    module.exports = { computeSelector, typeIconKey, headingLevel, isTextBearing, closestChildIndex, contrastRatio, wcagBadge, effectiveBackground, layoutNonDefaults, contentSummary, buildBreadcrumb, bandRectsForBox, gapStripsForFlexRow, fullyOffscreen, chevronEdgesForViewport };
   }
 
   // ── Browser-only from here ────────────────────────────────────────────────

@@ -252,3 +252,34 @@ test('gapStripsForFlexRow returns strips between siblings along the main axis', 
   // Single child → no strips
   assert.deepEqual(gapStripsForFlexRow(parentRect, [childRects[0]], 10, 'row'), []);
 });
+
+test('fullyOffscreen detects bounding boxes outside the viewport', () => {
+  const { fullyOffscreen } = load();
+  const vp = { width: 1000, height: 800 };
+  assert.equal(fullyOffscreen({ left: 0,    top:  0,    right: 100,  bottom: 100  }, vp), false);
+  assert.equal(fullyOffscreen({ left: -50,  top: -50,   right: -1,   bottom: -1   }, vp), true);
+  assert.equal(fullyOffscreen({ left: 1001, top: 0,     right: 1100, bottom: 100  }, vp), true);
+  assert.equal(fullyOffscreen({ left: 0,    top: 801,   right: 100,  bottom: 900  }, vp), true);
+  // Even one pixel intersecting → not fully off
+  assert.equal(fullyOffscreen({ left: 999,  top: 0,     right: 1100, bottom: 100  }, vp), false);
+});
+
+test('chevronEdgesForViewport flags edges that are cut by viewport', () => {
+  const { chevronEdgesForViewport } = load();
+  const vp = { width: 1000, height: 800 };
+  // Box larger than viewport in both dimensions, centered around origin
+  assert.deepEqual(
+    chevronEdgesForViewport({ left: -200, top: -200, right: 1200, bottom: 1000 }, vp),
+    { top: true, right: true, bottom: true, left: true }
+  );
+  // Box smaller than viewport, fully inside → no chevrons
+  assert.deepEqual(
+    chevronEdgesForViewport({ left: 100, top: 100, right: 500, bottom: 500 }, vp),
+    { top: false, right: false, bottom: false, left: false }
+  );
+  // Box extending past the bottom only
+  assert.deepEqual(
+    chevronEdgesForViewport({ left: 0, top: 0, right: 100, bottom: 1000 }, vp),
+    { top: false, right: false, bottom: true, left: false }
+  );
+});
