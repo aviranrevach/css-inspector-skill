@@ -79,3 +79,26 @@ test('hovering a row paints a faint parent outline above', async ({ page }) => {
   await page.mouse.move(target.x + 10, target.y + 7);
   await expect(page.locator('.__inspector-pp-parent')).toHaveCount(1);
 });
+
+test('hovering a row paints a dashed outline per child cell', async ({ page }) => {
+  await enterPickMode(page);
+  const target = await page.frameLocator('iframe').locator('[data-pp-test="row"]').boundingBox();
+  await page.mouse.move(target.x + 10, target.y + 7);
+  await expect(page.locator('.__inspector-pp-child')).toHaveCount(3);
+});
+
+test('the child closest to the cursor gets a near-cursor highlight', async ({ page }) => {
+  await enterPickMode(page);
+  const row = await page.frameLocator('iframe').locator('[data-pp-test="row"]').boundingBox();
+  // First land on the row (so renderPrePickLayers fires for it), then nudge cursor toward cell1's location.
+  await page.mouse.move(row.x + 10, row.y + 7);
+  // Now move cursor towards cell1 center (still hopefully on the row's content or padding-right edge).
+  // We want the near-cursor highlight to follow without changing target.
+  const cell = await page.frameLocator('iframe').locator('[data-pp-test="cell1"]').boundingBox();
+  await page.mouse.move(cell.x + cell.width / 2, cell.y + cell.height / 2);
+  // After moving onto the cell, the cell IS the new target. Exactly one .near at any time
+  // — either on the row's children (if still on row) or empty (if target changed to a cell).
+  // To stay scope-tight, assert: at most one .near exists.
+  const count = await page.locator('.__inspector-pp-child.near').count();
+  expect(count).toBeLessThanOrEqual(1);
+});

@@ -1926,6 +1926,7 @@
   // ── State ──────────────────────────────────────────────────────────────────
   let selectedElement = null;
   let pickMode = false;
+  let _lastCursorTargetLocal = { x: 0, y: 0 };
   // Multi-select state. When `multiPickMode` is true, picks accumulate
   // into `selectedElements` instead of replacing the primary. The primary
   // (`selectedElement`) tracks the most-recently-picked element so single-
@@ -2299,10 +2300,13 @@
   // renderRichTooltip() instead of the old textContent assignment.
   tooltip.classList.add('rich');
 
+  let _ppCurrentTarget = null;
+
   function clearPrePickLayers() {
     while (ppRoot.firstChild) ppRoot.removeChild(ppRoot.firstChild);
     ppRoot.classList.remove('dwell');
     ppRoot.style.display = 'none';
+    _ppCurrentTarget = null;
   }
 
   function _bandDiv(klass, rect, value) {
@@ -2323,8 +2327,20 @@
     return Number.isFinite(n) ? n : 0;
   }
 
+  function _updateNearCursor(target, cx, cy) {
+    const kids = ppRoot.querySelectorAll('.__inspector-pp-child');
+    if (!kids.length) return;
+    const childRects = Array.from(target.children).map(k => {
+      const kr = k.getBoundingClientRect();
+      return { left: kr.left, top: kr.top, right: kr.right, bottom: kr.bottom, width: kr.width, height: kr.height };
+    });
+    const idx = closestChildIndex(childRects, { x: cx, y: cy });
+    kids.forEach((node, i) => node.classList.toggle('near', i === idx));
+  }
+
   function renderPrePickLayers(target) {
     if (!target) { clearPrePickLayers(); return; }
+    _ppCurrentTarget = target;
     clearPrePickLayers();
     ppRoot.style.display = 'block';
 
@@ -2388,6 +2404,28 @@
       po.setAttribute('data-label', plabel);
       ppRoot.appendChild(po);
     }
+
+    // Direct children — dashed blue outline with tag chip on top-left.
+    const kids = Array.from(target.children).filter(k => k.tagName !== 'SCRIPT' && k.tagName !== 'STYLE');
+    kids.forEach(k => {
+      const kr = k.getBoundingClientRect();
+      const out = document.createElement('div');
+      out.className = '__inspector-pp-child';
+      out.style.cssText = `left:${kr.left + dx}px;top:${kr.top + dy}px;width:${kr.width}px;height:${kr.height}px;`;
+      const tagSpan = document.createElement('span');
+      tagSpan.className = 'tag';
+      const kcls = Array.from(k.classList || []).filter(c => c && !c.startsWith('__inspector'))[0];
+      tagSpan.textContent = k.tagName.toLowerCase() + (kcls ? '.' + kcls : '');
+      out.appendChild(tagSpan);
+      const sizeSpan = document.createElement('span');
+      sizeSpan.className = 'size';
+      sizeSpan.textContent = `${Math.round(kr.width)} × ${Math.round(kr.height)}`;
+      out.appendChild(sizeSpan);
+      ppRoot.appendChild(out);
+    });
+
+    // Initial near-cursor highlight based on most recent cursor position.
+    _updateNearCursor(target, _lastCursorTargetLocal.x, _lastCursorTargetLocal.y);
   }
 
   // HTML-escape helper, reused across renderers.
@@ -3317,6 +3355,12 @@
       cx -= dx; cy -= dy;
     }
     // From iframe events: already iframe-local.
+    _lastCursorTargetLocal = { x: cx, y: cy };
+    if (pickMode) {
+      // Re-paint near-cursor highlight on cursor movement during pick mode.
+      const cur = _ppCurrentTarget;
+      if (cur) _updateNearCursor(cur, cx, cy);
+    }
     updateArmedLevel(cx, cy);
     updateSelectionHover(cx, cy);
   }
