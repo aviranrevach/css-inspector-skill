@@ -110,3 +110,13 @@ test('rich tooltip shows tag, size, and type icon', async ({ page }) => {
   await expect(page.locator('#__inspector-tooltip .pp-title .tag')).toHaveText(/div\.pp-row/);
   await expect(page.locator('#__inspector-tooltip .pp-title .icon use')).toHaveAttribute('href', '#i-block');
 });
+
+test('tooltip shows Padding and Background rows for the row', async ({ page }) => {
+  await enterPickMode(page);
+  const target = await page.frameLocator('iframe').locator('[data-pp-test="row"]').boundingBox();
+  await page.mouse.move(target.x + 10, target.y + 7);
+  const tip = page.locator('#__inspector-tooltip');
+  await expect(tip).toContainText('Padding');
+  await expect(tip).toContainText('14 36 14 20');
+  await expect(tip).toContainText('Background');
+});

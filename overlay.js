@@ -2448,18 +2448,58 @@
 
   function renderRichTooltip(target) {
     if (!target) { tooltip.style.display = 'none'; return; }
-    const r = target.getBoundingClientRect();
+    const r  = target.getBoundingClientRect();
+    const cs = targetWin.getComputedStyle(target);
     const titleIcon = _tooltipTitleIcon(target);
-    const sel = _tooltipSelector(target);
+    const sel  = _tooltipSelector(target);
     const size = `${Math.round(r.width)} × ${Math.round(r.height)}`;
-    tooltip.innerHTML = `
+
+    const rows = [];
+    const _trim4 = (t, r, b, l) => {
+      // Reduce '14 14 14 14' → '14'; '14 18 14 18' → '14 18'; '14 36 14 20' → '14 36 14 20'.
+      const v = [t, r, b, l].map(_parsePx);
+      if (v[0] === v[1] && v[1] === v[2] && v[2] === v[3]) return `${v[0]}`;
+      if (v[0] === v[2] && v[1] === v[3]) return `${v[0]} ${v[1]}`;
+      return v.join(' ');
+    };
+    const isTxt = isTextBearing(target);
+    if (isTxt) {
+      const fontSize = _parsePx(cs.fontSize);
+      const fontWeight = cs.fontWeight;
+      const family = (cs.fontFamily || '').split(',')[0].replace(/['"]/g, '').trim();
+      rows.push({ k: 'Color', v: `<span class="pp-swatch" style="background:${cs.color}"></span>${_rgbToHex(cs.color)}` });
+      rows.push({ k: 'Font',  v: `${fontSize}/${fontWeight} ${_esc(family)}` });
+    }
+    const bg = cs.backgroundColor;
+    if (bg && bg !== 'transparent' && !/rgba\([^)]*,\s*0\s*\)$/.test(bg)) {
+      rows.push({ k: 'Background', v: `<span class="pp-swatch" style="background:${bg}"></span>${_rgbToHex(bg)}` });
+    }
+    const padding = _trim4(cs.paddingTop, cs.paddingRight, cs.paddingBottom, cs.paddingLeft);
+    if (padding !== '0') rows.push({ k: 'Padding', v: padding });
+    const margin = _trim4(cs.marginTop, cs.marginRight, cs.marginBottom, cs.marginLeft);
+    if (margin !== '0') rows.push({ k: 'Margin', v: margin });
+    const radius = _parsePx(cs.borderRadius);
+    if (radius > 0) rows.push({ k: 'Radius', v: String(radius) });
+
+    let html = `
       <div class="pp-title">
         ${titleIcon}
         <span class="tag">${_esc(sel)}</span>
         <span class="size">${size}</span>
       </div>
     `;
+    for (const row of rows) {
+      html += `<div class="pp-kv"><span class="k">${row.k}</span><span class="v">${row.v}</span></div>`;
+    }
+    tooltip.innerHTML = html;
     tooltip.style.display = 'block';
+  }
+
+  function _rgbToHex(rgb) {
+    const m = /rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/.exec(rgb || '');
+    if (!m) return rgb || '';
+    const [, r, g, b] = m;
+    return '#' + [r, g, b].map(v => Number(v).toString(16).padStart(2, '0').toUpperCase()).join('');
   }
 
   // HTML-escape helper, reused across renderers.
