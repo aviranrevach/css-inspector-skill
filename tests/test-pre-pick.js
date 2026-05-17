@@ -205,3 +205,20 @@ test('buildBreadcrumb stringifies up to maxDepth ancestors', () => {
   // null target
   assert.equal(buildBreadcrumb(null), '');
 });
+
+test('bandRectsForBox returns 8 rects for margin and padding sides', () => {
+  const { bandRectsForBox } = load();
+  const box = { left: 100, top: 50, right: 300, bottom: 150, width: 200, height: 100 };
+  const margin  = { top: 10, right: 20, bottom: 10, left: 20 };
+  const padding = { top: 5,  right: 8,  bottom: 5,  left: 8  };
+  const r = bandRectsForBox(box, margin, padding);
+
+  // Margin top: sits above box, full width + margin sides
+  assert.deepEqual(r.marginTop, { left: 80, top: 40, width: 240, height: 10 });
+  // Margin right: sits to the right of box, full margin height
+  assert.deepEqual(r.marginRight, { left: 300, top: 40, width: 20, height: 120 });
+  // Padding top: sits inside top edge of box
+  assert.deepEqual(r.paddingTop, { left: 100, top: 50, width: 200, height: 5 });
+  // Padding left: sits inside left edge of box, between top and bottom paddings
+  assert.deepEqual(r.paddingLeft, { left: 100, top: 55, width: 8, height: 90 });
+});

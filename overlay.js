@@ -160,8 +160,23 @@
     return truncated ? `… › ${parts.join(' › ')}` : parts.join(' › ');
   }
 
+  function bandRectsForBox(box, margin, padding) {
+    const m = margin || { top:0, right:0, bottom:0, left:0 };
+    const p = padding || { top:0, right:0, bottom:0, left:0 };
+    return {
+      marginTop:    { left: box.left - m.left,  top: box.top - m.top,  width: box.width + m.left + m.right, height: m.top },
+      marginRight:  { left: box.right,          top: box.top - m.top,  width: m.right,                       height: box.height + m.top + m.bottom },
+      marginBottom: { left: box.left - m.left,  top: box.bottom,       width: box.width + m.left + m.right, height: m.bottom },
+      marginLeft:   { left: box.left - m.left,  top: box.top - m.top,  width: m.left,                        height: box.height + m.top + m.bottom },
+      paddingTop:    { left: box.left,                top: box.top,               width: box.width,                 height: p.top },
+      paddingRight:  { left: box.right - p.right,     top: box.top + p.top,       width: p.right,                   height: box.height - p.top - p.bottom },
+      paddingBottom: { left: box.left,                top: box.bottom - p.bottom, width: box.width,                 height: p.bottom },
+      paddingLeft:   { left: box.left,                top: box.top + p.top,       width: p.left,                    height: box.height - p.top - p.bottom },
+    };
+  }
+
   if (typeof module !== 'undefined') {
-    module.exports = { computeSelector, typeIconKey, headingLevel, isTextBearing, closestChildIndex, contrastRatio, wcagBadge, effectiveBackground, layoutNonDefaults, contentSummary, buildBreadcrumb };
+    module.exports = { computeSelector, typeIconKey, headingLevel, isTextBearing, closestChildIndex, contrastRatio, wcagBadge, effectiveBackground, layoutNonDefaults, contentSummary, buildBreadcrumb, bandRectsForBox };
   }
 
   // ── Browser-only from here ────────────────────────────────────────────────
