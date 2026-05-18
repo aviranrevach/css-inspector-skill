@@ -158,27 +158,21 @@ test('CONTENT section shows child count for a row', async ({ page }) => {
   await expect(tip).toContainText('3 children');
 });
 
-test('after 2.2s of stillness the .__inspector-pp-root gains the .dwell class', async ({ page }) => {
+test('WALK ladder is visible immediately on hover (no dwell delay)', async ({ page }) => {
   await enterPickMode(page);
   const target = await page.frameLocator('iframe').locator('[data-pp-test="row"]').boundingBox();
   await page.mouse.move(target.x + 10, target.y + 7);
-  await page.waitForTimeout(2200);
-  await expect(page.locator('.__inspector-pp-root')).toHaveClass(/\bdwell\b/);
-  // A small cursor twitch (>2px) should remove the class.
-  await page.mouse.move(target.x + 15, target.y + 12);
-  await expect(page.locator('.__inspector-pp-root')).not.toHaveClass(/\bdwell\b/);
+  await expect(page.locator('#__inspector-tooltip .pp-ladder')).toHaveCount(1);
+  await expect(page.locator('#__inspector-tooltip .pp-ladder')).toBeVisible();
 });
 
-test('dwell reveals breadcrumb + ladder hint + size badges', async ({ page }) => {
+test('no dwell-only items render (breadcrumb / dwell-ring / size-badge are gone)', async ({ page }) => {
   await enterPickMode(page);
   const target = await page.frameLocator('iframe').locator('[data-pp-test="row"]').boundingBox();
   await page.mouse.move(target.x + 10, target.y + 7);
-  await expect(page.locator('.__inspector-pp-breadcrumb')).toHaveCount(1);
-  await expect(page.locator('#__inspector-tooltip .pp-ladder')).toHaveCount(1);
-  await expect(page.locator('.__inspector-pp-dwell-ring')).toHaveCount(1);
-  await page.waitForTimeout(2200);
-  await expect(page.locator('.__inspector-pp-breadcrumb')).toHaveCSS('opacity', '1');
-  await expect(page.locator('#__inspector-tooltip .pp-ladder')).toHaveCSS('opacity', '1');
+  await expect(page.locator('.__inspector-pp-breadcrumb')).toHaveCount(0);
+  await expect(page.locator('.__inspector-pp-dwell-ring')).toHaveCount(0);
+  await expect(page.locator('.__inspector-pp-child .size')).toHaveCount(0);
 });
 
 test('clicking commits the walked target, not the cursor target', async ({ page }) => {
@@ -274,32 +268,29 @@ test('walking to body shows chevrons because it overflows the viewport', async (
   await expect(page.locator('.__inspector-pp-chevron')).not.toHaveCount(0);
 });
 
-test('full pre-pick flow: hover → dwell → walk → click commits walked target', async ({ page }) => {
+test('full pre-pick flow: hover → walk → click commits walked target', async ({ page }) => {
   await enterPickMode(page);
   const cell = await page.frameLocator('iframe').locator('[data-pp-test="cell1"]').boundingBox();
 
-  // 1. Hover the cell — layers paint.
+  // 1. Hover the cell — layers paint, WALK ladder shows immediately.
   await page.mouse.move(cell.x + cell.width / 2, cell.y + cell.height / 2);
   await expect(page.locator('.__inspector-pp-band.padding')).toHaveCount(4);
   await expect(page.locator('#__inspector-tooltip .pp-title .tag')).toContainText('div.pp-cell');
+  await expect(page.locator('#__inspector-tooltip .pp-ladder')).toBeVisible();
 
-  // 2. Hold still 2.2s → dwell reveals.
-  await page.waitForTimeout(2200);
-  await expect(page.locator('.__inspector-pp-root')).toHaveClass(/\bdwell\b/);
-
-  // 3. ⌥↑ walks to row.
+  // 2. ⌥↑ walks to row.
   await page.keyboard.down('Alt');
   await page.keyboard.press('ArrowUp');
   await page.keyboard.up('Alt');
   await expect(page.locator('#__inspector-tooltip .pp-title .tag')).toContainText('div.pp-row');
 
-  // 4. ⌥↑ again walks to section.
+  // 3. ⌥↑ again walks to section.
   await page.keyboard.down('Alt');
   await page.keyboard.press('ArrowUp');
   await page.keyboard.up('Alt');
   await expect(page.locator('#__inspector-tooltip .pp-title .tag')).toContainText('section.pp-dashboard');
 
-  // 5. Click commits the walked target (cursor is still on the cell).
+  // 4. Click commits the walked target (cursor is still on the cell).
   await page.mouse.click(cell.x + cell.width / 2, cell.y + cell.height / 2);
   await expect(page.locator('#__inspector-selector-pill')).toContainText(/pp-dashboard/);
 });

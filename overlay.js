@@ -1739,46 +1739,12 @@
   font: 600 9px Inter, system-ui, sans-serif;
   padding: 1px 5px; border-radius: 3px;
 }
-.__inspector-pp-child .size {
-  position: absolute; bottom: -10px; right: 4px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  color: #475569;
-  font: 400 9px Inter, system-ui, sans-serif;
-  padding: 1px 5px; border-radius: 3px;
-  opacity: 0; transition: opacity 0.4s ease-out;
-}
-.__inspector-pp-root.dwell .__inspector-pp-child .size { opacity: 1; }
-
 .__inspector-pp-chevron {
   position: fixed; pointer-events: none;
   color: #3b82f6;
   font: 700 14px Inter, system-ui, sans-serif;
   z-index: 2147483642;
 }
-.__inspector-pp-breadcrumb {
-  position: fixed; pointer-events: none;
-  font: 400 9px Inter, system-ui, sans-serif;
-  color: #94a3b8;
-  z-index: 2147483643;
-  opacity: 0; transition: opacity 0.4s ease-out;
-}
-.__inspector-pp-breadcrumb b { color: #64748b; }
-.__inspector-pp-root.dwell .__inspector-pp-breadcrumb { opacity: 1; }
-
-.__inspector-pp-dwell-ring {
-  position: fixed;
-  width: 12px; height: 12px;
-  border-radius: 50%;
-  border: 1.5px solid #cbd5e1;
-  border-top-color: #3b82f6;
-  border-right-color: #3b82f6;
-  animation: __inspector-pp-spin 2s linear infinite;
-  opacity: .65;
-  z-index: 2147483643;
-  pointer-events: none;
-}
-@keyframes __inspector-pp-spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
 
 /* ────── Rich tooltip — replaces the simple text tooltip ────── */
 #__inspector-tooltip.rich {
@@ -1793,12 +1759,12 @@
   line-height: 1.45;
 }
 #__inspector-tooltip.rich .pp-title {
-  display: grid; grid-template-columns: 18px auto 1fr;
-  align-items: center; gap: 6px;
+  display: grid; grid-template-columns: 16px auto 1fr;
+  align-items: center; gap: 3px;
   margin-bottom: 4px;
 }
 #__inspector-tooltip.rich .pp-title .icon { width: 14px; height: 14px; color: #3b82f6; }
-#__inspector-tooltip.rich .pp-title .tag  { color: #7c3aed; font-weight: 700; font-size: 12px; }
+#__inspector-tooltip.rich .pp-title .tag  { color: #7c3aed; font-weight: 700; font-size: 12px; line-height: 1; padding-left: 4px; }
 #__inspector-tooltip.rich .pp-title .size { color: #0f172a; text-align: right; font-weight: 500; }
 #__inspector-tooltip.rich .pp-title .glyph-text {
   font: 700 10px ui-monospace, "SF Mono", Menlo, monospace;
@@ -1818,13 +1784,13 @@
 #__inspector-tooltip.rich .pp-kv .v { color: #0f172a; text-align: right; }
 #__inspector-tooltip.rich .pp-kv .v.muted { color: #94a3b8; }
 #__inspector-tooltip.rich .pp-section {
-  display: grid; grid-template-columns: 11px auto 1fr;
-  align-items: center; gap: 5px;
+  display: grid; grid-template-columns: 13px auto 1fr;
+  align-items: center; gap: 6px;
   margin-top: 8px; margin-bottom: 2px;
 }
-#__inspector-tooltip.rich .pp-section svg { width: 10px; height: 10px; color: #94a3b8; }
+#__inspector-tooltip.rich .pp-section svg { width: 13px; height: 13px; color: #94a3b8; }
 #__inspector-tooltip.rich .pp-section .label {
-  font: 700 9px Inter, system-ui, sans-serif;
+  font: 700 10px Inter, system-ui, sans-serif;
   color: #94a3b8;
   letter-spacing: .1em;
 }
@@ -1898,10 +1864,12 @@
   background: #ffffff;
   border: 0;
   border-radius: 2px;
-  padding: 10px 0;
-  text-align: center;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: #0f172a;
-  font: 600 12px Inter, system-ui, sans-serif;
+  font: 600 12px/1 Inter, system-ui, sans-serif;
 }
 
 /* ────── Inline ladder section (replaces floating banner) ────── */
@@ -2354,13 +2322,8 @@
         <symbol id="s-content" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="15" y2="12"/><line x1="4" y1="18" x2="18" y2="18"/>
         </symbol>
-        <symbol id="s-walk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="2" y="6" width="20" height="12" rx="2"/>
-          <line x1="6"  y1="10" x2="6"  y2="10"/>
-          <line x1="10" y1="10" x2="10" y2="10"/>
-          <line x1="14" y1="10" x2="14" y2="10"/>
-          <line x1="18" y1="10" x2="18" y2="10"/>
-          <line x1="7"  y1="14" x2="17" y2="14"/>
+        <symbol id="s-walk" viewBox="0 0 256 256" fill="currentColor">
+          <path d="M224,56H32A16,16,0,0,0,16,72V184a16,16,0,0,0,16,16H224a16,16,0,0,0,16-16V72A16,16,0,0,0,224,56Zm0,128H32V72H224V184ZM80,128a8,8,0,0,1-8,8H56a8,8,0,0,1,0-16H72A8,8,0,0,1,80,128Zm40,0a8,8,0,0,1-8,8H96a8,8,0,0,1,0-16h16A8,8,0,0,1,120,128Zm40,0a8,8,0,0,1-8,8H136a8,8,0,0,1,0-16h16A8,8,0,0,1,160,128Zm40,0a8,8,0,0,1-8,8H176a8,8,0,0,1,0-16h16A8,8,0,0,1,200,128ZM80,96a8,8,0,0,1-8,8H56a8,8,0,0,1,0-16H72A8,8,0,0,1,80,96Zm40,0a8,8,0,0,1-8,8H96a8,8,0,0,1,0-16h16A8,8,0,0,1,120,96Zm40,0a8,8,0,0,1-8,8H136a8,8,0,0,1,0-16h16A8,8,0,0,1,160,96Zm40,0a8,8,0,0,1-8,8H176a8,8,0,0,1,0-16h16A8,8,0,0,1,200,96ZM176,160a8,8,0,0,1-8,8H88a8,8,0,0,1,0-16h80A8,8,0,0,1,176,160Z"/>
         </symbol>
       </defs>
     </svg>
@@ -2368,7 +2331,7 @@
   document.body.appendChild(sprite);
 
   // Pre-pick layer container — every new layer (bands, child outlines,
-  // parent outline, chevrons, breadcrumb, ladder, dwell ring) mounts here.
+  // parent outline, chevrons) mounts here.
   const ppRoot = document.createElement('div');
   ppRoot.className = '__inspector-pp-root';
   ppRoot.style.cssText = 'position:fixed;inset:0;pointer-events:none;display:none;z-index:2147483640;';
@@ -2379,29 +2342,11 @@
   tooltip.classList.add('rich');
 
   let _ppCurrentTarget = null;
-  let _dwellTimerId = null;
-
-  function startDwellTimer() {
-    cancelDwell();
-    const ms = (settings && typeof settings.dwellMs === 'number') ? settings.dwellMs : 2000;
-    _dwellTimerId = setTimeout(() => {
-      ppRoot.classList.add('dwell');
-      tooltip.classList.add('dwell');
-      _dwellTimerId = null;
-    }, ms);
-  }
-  function cancelDwell() {
-    if (_dwellTimerId != null) { clearTimeout(_dwellTimerId); _dwellTimerId = null; }
-    ppRoot.classList.remove('dwell');
-    tooltip.classList.remove('dwell');
-  }
 
   function clearPrePickLayers() {
     while (ppRoot.firstChild) ppRoot.removeChild(ppRoot.firstChild);
-    ppRoot.classList.remove('dwell');
     ppRoot.style.display = 'none';
     _ppCurrentTarget = null;
-    cancelDwell();
   }
 
   function _bandDiv(klass, rect, value) {
@@ -2523,34 +2468,11 @@
       const kcls = Array.from(k.classList || []).filter(c => c && !c.startsWith('__inspector'))[0];
       tagSpan.textContent = k.tagName.toLowerCase() + (kcls ? '.' + kcls : '');
       out.appendChild(tagSpan);
-      const sizeSpan = document.createElement('span');
-      sizeSpan.className = 'size';
-      sizeSpan.textContent = `${Math.round(kr.width)} × ${Math.round(kr.height)}`;
-      out.appendChild(sizeSpan);
       ppRoot.appendChild(out);
     });
 
     // Initial near-cursor highlight based on most recent cursor position.
     _updateNearCursor(target, _lastCursorTargetLocal.x, _lastCursorTargetLocal.y);
-
-    // Ancestor breadcrumb — sits 30px above the target's top-left.
-    const crumb = document.createElement('div');
-    crumb.className = '__inspector-pp-breadcrumb';
-    const text = buildBreadcrumb(target, { maxDepth: 4 });
-    const lastSep = text.lastIndexOf(' › ');
-    if (lastSep > 0) {
-      crumb.innerHTML = `<b>${_esc(text.slice(0, lastSep + 3))}</b>${_esc(text.slice(lastSep + 3))}`;
-    } else {
-      crumb.textContent = text;
-    }
-    crumb.style.cssText += `left:${box.left}px;top:${box.top - 22}px;`;
-    ppRoot.appendChild(crumb);
-
-    // Dwell progress ring — anchored next to the target's top-right.
-    const ring = document.createElement('div');
-    ring.className = '__inspector-pp-dwell-ring';
-    ring.style.cssText += `left:${box.left + box.width - 16}px;top:${box.top - 20}px;`;
-    ppRoot.appendChild(ring);
 
     const viewport = { width: targetWin.innerWidth, height: targetWin.innerHeight };
     const chevrons = chevronEdgesForViewport({ top: r.top, bottom: r.bottom, left: r.left, right: r.right }, viewport);
@@ -2587,7 +2509,6 @@
       }
     }
 
-    startDwellTimer();
   }
 
   function _esc(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
@@ -2855,9 +2776,6 @@
     // When on (default), the picked element shows a persistent 2px blue
     // outline so users can see what's selected. Off = no outline.
     showSelectedOutline: true,
-    // Dwell duration in ms — how long the cursor must hold still before
-    // the breadcrumb / size badges / ladder hint fade in during pick mode.
-    dwellMs: 2000,
   };
   function loadSettings() {
     const fromHost = (typeof window !== 'undefined' && window.__inspectorSettings) || null;
@@ -3752,7 +3670,6 @@
       } else if (_ppCurrentTarget) {
         _updateNearCursor(_ppCurrentTarget, cx, cy);
       }
-      if (moved) startDwellTimer();
     } else {
       _lastCursorTargetLocal = { x: cx, y: cy };
     }
