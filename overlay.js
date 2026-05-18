@@ -463,8 +463,16 @@
     #__inspector-minimize:hover { color: #888; }
 
     #__inspector-root.minimized #__inspector-tabs,
-    #__inspector-root.minimized #__inspector-panels {
+    #__inspector-root.minimized #__inspector-panels,
+    #__inspector-root.minimized #__inspector-changes-bar,
+    #__inspector-root.minimized #__inspector-resize-handle {
       display: none;
+    }
+    /* Collapse the outer container to just the header. !important is needed
+       to win over the inline max-height the resize handle may have set. */
+    #__inspector-root.minimized {
+      height: auto !important;
+      max-height: none !important;
     }
 
     /* Tabs */
